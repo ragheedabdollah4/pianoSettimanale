@@ -117,6 +117,36 @@
   .custom-dish-row input:focus { border-color: var(--accent); }
   .custom-dish-row select { padding: 10px 12px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; outline: none; }
 
+  /* People bar + done toggles */
+  .people-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 28px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); }
+  .people-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+  .people-input { padding: 9px 12px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; width: 150px; }
+  .people-input:focus { border-color: var(--accent); }
+  .people-hint { font-size: 0.74rem; color: var(--muted); font-style: italic; margin-left: auto; }
+
+  .done-row { display: flex; gap: 4px; margin-top: 8px; }
+  .done-chip {
+    flex: 1; font-size: 0.6rem; padding: 4px 4px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; border-radius: 3px;
+    font-family: 'DM Sans', sans-serif; letter-spacing: 0.02em; line-height: 1.3;
+    transition: all 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%;
+  }
+  .done-chip:hover { border-color: var(--accent2); color: var(--accent2); }
+  .done-chip.on { background: var(--accent2); border-color: var(--accent2); color: white; font-weight: 600; }
+  .meal-card.consumed { opacity: 0.62; }
+
+  /* Shopping list */
+  .btn-shop { background: var(--gold); color: var(--ink); }
+  .btn-shop:hover { background: #c0962f; }
+  .shop-box { border: 1px solid var(--border); padding: 4px 0; margin-bottom: 18px; max-height: 60vh; overflow-y: auto; }
+  .shop-cat { padding: 6px 16px; }
+  .shop-cat h3 { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: var(--accent); margin: 12px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .shop-item { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; font-size: 0.9rem; cursor: pointer; }
+  .shop-item input { margin-top: 3px; accent-color: var(--accent2); cursor: pointer; }
+  .shop-item.checked span { text-decoration: line-through; color: var(--muted); }
+  .shop-empty { padding: 20px 16px; color: var(--muted); font-style: italic; font-size: 0.85rem; }
+  .shop-error { padding: 16px; color: #c00; font-size: 0.85rem; }
+
   /* Loading */
   .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(26,18,8,0.7); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 16px; color: var(--bg); }
   .loading-overlay.active { display: flex; }
@@ -307,11 +337,38 @@
   </div>
 </div>
 
+<!-- Shopping list modal -->
+<div class="modal-bg" id="shopModal">
+  <div class="modal">
+    <h2>🛒 Lista della spesa</h2>
+    <p class="modal-subtitle">Ingredienti per i piatti di questa settimana, raggruppati per reparto.</p>
+    <div class="shop-box" id="shopBox">
+      <div class="ai-loading" id="shopLoading">
+        <div class="ai-spinner"></div>
+        <span>Claude sta preparando la lista…</span>
+      </div>
+      <div id="shopResult" style="display:none"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="copyShopBtn" onclick="copyShopList()" disabled>📋 Copia lista</button>
+      <button class="btn btn-secondary" onclick="closeShopModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <div class="controls">
     <button class="btn btn-primary" onclick="generatePlan()">🎲 Genera Piano</button>
+    <button class="btn btn-shop" onclick="openShopModal()" id="btnShop" disabled>🛒 Lista della spesa</button>
     <button class="btn btn-email" onclick="openEmailModal()" id="btnEmail" disabled>📧 Invia via Email</button>
     <div class="week-label" id="weekInfo"></div>
+  </div>
+
+  <div class="people-bar" id="peopleBar" style="display:none">
+    <span class="people-label">👥 Chi mangia</span>
+    <input id="name1" class="people-input" maxlength="22" placeholder="Persona 1" oninput="onNameChange()">
+    <input id="name2" class="people-input" maxlength="22" placeholder="Persona 2" oninput="onNameChange()">
+    <span class="people-hint">Spunta ogni pasto quando l'hai consumato</span>
   </div>
 
   <div class="legend">
@@ -380,15 +437,16 @@ const DISHES = [
   { name: "Aperitivo Eataly", source: "Stella" },
 ];
 
+// min = vincolo minimo garantito · max = tetto massimo · extraWeight = priorità per gli slot extra
 const FREQUENCIES = {
-  "Pesce":        { min: 3, label: "Pesce",        color: "var(--pesce)" },
-  "Legumi":       { min: 3, label: "Legumi",       color: "var(--legumi)" },
-  "Carne Bianca": { min: 2, label: "Carne Bianca", color: "var(--bianca)" },
-  "Latticini":    { min: 2, label: "Latticini",    color: "var(--latticini)" },
-  "Uova":         { min: 3, label: "Uova",         color: "var(--uova)" },
-  "Carne Rossa":  { min: 1, label: "Carne Rossa",  color: "var(--rossa)" },
-  "Affettati Magri": { min: 1, label: "Affettati", color: "var(--affettati)" },
-  "Stella":       { min: 1, label: "⭐ Stella",    color: "var(--stella)" },
+  "Pesce":        { min: 3, max: 4, extraWeight: 4, label: "Pesce",        color: "var(--pesce)" },
+  "Legumi":       { min: 2, max: 3, extraWeight: 3, label: "Legumi",       color: "var(--legumi)" },
+  "Uova":         { min: 2, max: 3, extraWeight: 3, label: "Uova",         color: "var(--uova)" },
+  "Carne Bianca": { min: 1, max: 2, extraWeight: 1, label: "Carne Bianca", color: "var(--bianca)" },
+  "Latticini":    { min: 1, max: 2, extraWeight: 1, label: "Latticini",    color: "var(--latticini)" },
+  "Carne Rossa":  { min: 0, max: 1, extraWeight: 1, label: "Carne Rossa",  color: "var(--rossa)" },
+  "Affettati Magri": { min: 0, max: 1, extraWeight: 1, label: "Affettati", color: "var(--affettati)" },
+  "Stella":       { min: 1, max: 1, extraWeight: 0, label: "⭐ Stella",    color: "var(--stella)" },
 };
 
 const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
@@ -402,6 +460,7 @@ let currentPlan = null;
 let swapTarget = null;
 let swapSelected = null;
 let aiSuggestedDish = null;
+let currentPeople = { p1: 'Persona 1', p2: 'Persona 2' };
 
 // ─── HELPERS ───────────────────────────────────────────────
 function shuffle(arr) {
@@ -467,6 +526,11 @@ function showSaveStatus(msg, isError) {
   el._t = setTimeout(() => { el.className = 'save-status'; }, 2200);
 }
 
+function normDone(d) {
+  const x = d || {};
+  return { p1: !!x.p1, p2: !!x.p2 };
+}
+
 function savePlan() {
   if (!currentPlan) return;
   if (!db) { showSaveStatus('⚠ Firebase non configurato', true); return; }
@@ -474,10 +538,11 @@ function savePlan() {
     weekId: currentWeekId,
     label: currentWeekLabel,
     updatedAt: Date.now(),
+    people: { p1: currentPeople.p1, p2: currentPeople.p2 },
     days: currentPlan.map(d => ({
       day: d.day,
-      pranzo: { name: d.pranzo.name, source: d.pranzo.source },
-      cena:   { name: d.cena.name,   source: d.cena.source },
+      pranzo: { name: d.pranzo.name, source: d.pranzo.source, done: normDone(d.pranzo.done) },
+      cena:   { name: d.cena.name,   source: d.cena.source,   done: normDone(d.cena.done) },
     })),
   };
   db.ref('piani/' + currentWeekId).set(payload)
@@ -500,11 +565,17 @@ async function loadSavedPlan() {
     // Realtime DB può restituire un array come oggetto {0:..,1:..}: normalizziamo
     if (days && !Array.isArray(days)) days = Object.values(days);
     if (!Array.isArray(days) || !days.length) return null;
-    return days.map((d, i) => ({
-      day: (d && d.day) || DAYS[i],
-      pranzo: (d && d.pranzo) || { name: '—', source: 'Insalate' },
-      cena:   (d && d.cena)   || { name: '—', source: 'Insalate' },
-    }));
+    const mapMeal = m => m
+      ? { name: m.name, source: m.source, done: normDone(m.done) }
+      : { name: '—', source: 'Insalate', done: { p1: false, p2: false } };
+    return {
+      days: days.map((d, i) => ({
+        day: (d && d.day) || DAYS[i],
+        pranzo: mapMeal(d && d.pranzo),
+        cena:   mapMeal(d && d.cena),
+      })),
+      people: data && data.people ? data.people : null,
+    };
   } catch (err) {
     console.error('Errore caricamento:', err);
     return { error: err.message || String(err) };
@@ -529,41 +600,70 @@ function generatePlan() {
     renderPlan(currentPlan);
     document.getElementById('loadingOverlay').classList.remove('active');
     document.getElementById('btnEmail').disabled = false;
+    document.getElementById('btnShop').disabled = false;
     document.getElementById('weekInfo').textContent = 'Settimana del ' + currentWeekLabel;
     savePlan();
   }, 500);
 }
 
+function weightedPick(options, weightOf) {
+  const total = options.reduce((s, o) => s + Math.max(0.0001, weightOf(o)), 0);
+  let r = Math.random() * total;
+  for (const o of options) { r -= Math.max(0.0001, weightOf(o)); if (r <= 0) return o; }
+  return options[options.length - 1];
+}
+
+// Costruisce l'esatto insieme di 14 fonti: prima i MINIMI garantiti,
+// poi distribuisce gli slot extra sulle fonti con margine (massimi alti).
+function buildSourceMultiset() {
+  const TOTAL = 14;
+  const counts = {};
+  for (const [src, r] of Object.entries(FREQUENCIES)) counts[src] = r.min;
+  let placed = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  while (placed < TOTAL) {
+    const avail = Object.keys(FREQUENCIES).filter(s => counts[s] < FREQUENCIES[s].max);
+    if (!avail.length) break; // non dovrebbe accadere: somma dei max (17) > 14
+    const pick = weightedPick(avail, s => FREQUENCIES[s].extraWeight);
+    counts[pick]++; placed++;
+  }
+
+  const arr = [];
+  for (const [src, n] of Object.entries(counts)) for (let i = 0; i < n; i++) arr.push(src);
+  return arr; // length 14
+}
+
+// Sistema le 14 fonti in 7 giorni × 2 slot, mai la stessa fonte due volte nello stesso giorno
+function placeSources(multiset) {
+  const freq = {};
+  multiset.forEach(s => freq[s] = (freq[s] || 0) + 1);
+
+  for (let attempt = 0; attempt < 300; attempt++) {
+    const slots = Array.from({ length: 7 }, () => []);
+    // piazza prima le fonti più frequenti (le più difficili da incastrare)
+    const order = shuffle([...multiset]).sort((a, b) => freq[b] - freq[a]);
+    let ok = true;
+    for (const src of order) {
+      const candidates = shuffle([0, 1, 2, 3, 4, 5, 6])
+        .filter(d => slots[d].length < 2 && !slots[d].includes(src));
+      if (!candidates.length) { ok = false; break; }
+      slots[candidates[0]].push(src);
+    }
+    if (ok && slots.every(d => d.length === 2)) {
+      // randomizza l'ordine pranzo/cena dentro ogni giorno
+      return slots.map(d => shuffle(d));
+    }
+  }
+  return null;
+}
+
 function buildPlan() {
-  const required = [];
-  for (const [src, conf] of Object.entries(FREQUENCIES))
-    for (let i = 0; i < conf.min; i++) required.push(src);
-
-  const trimmable = required.filter(s => !['Stella','Carne Rossa','Affettati Magri'].includes(s));
-  let trimmed = [...required];
-  for (let i = 0; i < 2; i++) {
-    const idx = trimmed.lastIndexOf(trimmable[i]);
-    if (idx !== -1) trimmed.splice(idx, 1);
+  let slots = null;
+  for (let i = 0; i < 5 && !slots; i++) slots = placeSources(buildSourceMultiset());
+  // fallback estremo (non dovrebbe servire): riempi con Insalate
+  if (!slots) {
+    slots = Array.from({ length: 7 }, () => ["Insalate", "Insalate"]);
   }
-  const sources = shuffle(trimmed);
-  const slots = Array.from({ length: 7 }, () => [null, null]);
-
-  function tryPlace(src, attempt = 0) {
-    if (attempt > 80) return false;
-    const d = Math.floor(Math.random() * 7), m = Math.floor(Math.random() * 2);
-    if (slots[d][m] !== null || slots[d].includes(src)) return tryPlace(src, attempt + 1);
-    slots[d][m] = src;
-    return true;
-  }
-  for (const src of sources) tryPlace(src);
-
-  for (let d = 0; d < 7; d++)
-    for (let m = 0; m < 2; m++)
-      if (slots[d][m] === null) {
-        for (const f of shuffle(["Insalate","Legumi","Uova","Pesce"]))
-          if (!slots[d].includes(f) || f === "Insalate") { slots[d][m] = f; break; }
-        if (slots[d][m] === null) slots[d][m] = "Insalate";
-      }
 
   const used = new Set();
   function pickDish(src) {
@@ -571,7 +671,7 @@ function buildPlan() {
     const pool = cands.length ? cands : DISHES.filter(d => d.source === src);
     const pick = pool[Math.floor(Math.random() * pool.length)] || { name: src, source: src };
     used.add(pick.name);
-    return pick;
+    return { name: pick.name, source: pick.source, done: { p1: false, p2: false } };
   }
   return slots.map((day, i) => ({ day: DAYS[i], pranzo: pickDish(day[0]), cena: pickDish(day[1]) }));
 }
@@ -609,13 +709,39 @@ function renderPlan(plan) {
     `;
     grid.appendChild(col);
   });
+  syncPeopleInputs();
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function doneChipsHTML(dish, dayIdx, meal) {
+  const d = dish.done || { p1: false, p2: false };
+  const chip = (who) =>
+    `<button class="done-chip ${d[who] ? 'on' : ''}" id="done-${dayIdx}-${meal}-${who}"
+       onclick="event.stopPropagation(); toggleDone(${dayIdx},'${meal}','${who}')"
+       title="Segna come consumato">${d[who] ? '✓ ' : ''}${escapeHtml(currentPeople[who])}</button>`;
+  return `<div class="done-row">${chip('p1')}${chip('p2')}</div>`;
+}
+
+function mealCardInner(dish, dayIdx, meal) {
+  return `<div class="meal-name">${escapeHtml(dish.name)}</div>
+    <div class="meal-source">${escapeHtml(dish.source)}</div>
+    ${doneChipsHTML(dish, dayIdx, meal)}`;
+}
+
+function isConsumed(dish) {
+  const d = dish.done || {};
+  return d.p1 && d.p2;
 }
 
 function mealCardHTML(dish, dayIdx, meal) {
   const cls = SOURCE_CLASS[dish.source] || 'src-insalate';
-  return `<div class="meal-card ${cls}" id="card-${dayIdx}-${meal}">
-    <div class="meal-name">${dish.name}</div>
-    <div class="meal-source">${dish.source}</div>
+  const consumed = isConsumed(dish) ? ' consumed' : '';
+  return `<div class="meal-card ${cls}${consumed}" id="card-${dayIdx}-${meal}">
+    ${mealCardInner(dish, dayIdx, meal)}
   </div>`;
 }
 
@@ -628,21 +754,63 @@ function refreshFreqBar(plan) {
     const b = document.createElement('div');
     b.className = 'freq-badge';
     b.style.background = conf.color;
+    const min = conf.min ? ` <span style="opacity:0.8">(min ${conf.min})</span>` : '';
     b.innerHTML = `<span>${conf.label}</span> <span class="count">${counts[src]||0}x</span>`;
     bar.appendChild(b);
   }
 }
 
 function applyDishToCard(dayIdx, meal, dish) {
+  // cambio piatto → reset "consumato"
+  dish.done = { p1: false, p2: false };
   currentPlan[dayIdx][meal] = dish;
   const card = document.getElementById(`card-${dayIdx}-${meal}`);
   if (card) {
     const cls = SOURCE_CLASS[dish.source] || 'src-insalate';
     card.className = `meal-card ${cls} just-changed`;
-    card.innerHTML = `<div class="meal-name">${dish.name}</div><div class="meal-source">${dish.source}</div>`;
+    card.innerHTML = mealCardInner(dish, dayIdx, meal);
   }
   refreshFreqBar(currentPlan);
   savePlan();
+}
+
+// ─── DONE / PERSONE ────────────────────────────────────────
+function toggleDone(dayIdx, meal, who) {
+  const dish = currentPlan[dayIdx][meal];
+  if (!dish.done) dish.done = { p1: false, p2: false };
+  dish.done[who] = !dish.done[who];
+  const chip = document.getElementById(`done-${dayIdx}-${meal}-${who}`);
+  if (chip) {
+    chip.classList.toggle('on', dish.done[who]);
+    chip.textContent = (dish.done[who] ? '✓ ' : '') + currentPeople[who];
+  }
+  const card = document.getElementById(`card-${dayIdx}-${meal}`);
+  if (card) card.classList.toggle('consumed', isConsumed(dish));
+  savePlan();
+}
+
+function syncPeopleInputs() {
+  document.getElementById('name1').value = currentPeople.p1 === 'Persona 1' ? '' : currentPeople.p1;
+  document.getElementById('name2').value = currentPeople.p2 === 'Persona 2' ? '' : currentPeople.p2;
+  document.getElementById('peopleBar').style.display = currentPlan ? 'flex' : 'none';
+}
+
+let nameSaveTimer = null;
+function onNameChange() {
+  currentPeople.p1 = document.getElementById('name1').value.trim() || 'Persona 1';
+  currentPeople.p2 = document.getElementById('name2').value.trim() || 'Persona 2';
+  // aggiorna solo le etichette dei chip, senza ridisegnare tutto
+  document.querySelectorAll('.done-chip').forEach(chip => {
+    const who = chip.id.endsWith('-p1') ? 'p1' : 'p2';
+    const on = chip.classList.contains('on');
+    chip.textContent = (on ? '✓ ' : '') + currentPeople[who];
+  });
+  // salva (con un piccolo debounce per non scrivere a ogni tasto)
+  clearTimeout(nameSaveTimer);
+  nameSaveTimer = setTimeout(() => {
+    savePlan();
+    if (db) db.ref('persone').set(currentPeople).catch(() => {});
+  }, 600);
 }
 
 function swapContextHTML(dayIdx, meal) {
@@ -848,6 +1016,119 @@ function closeAiModal() {
   aiSuggestedDish = null;
 }
 
+// ─── LISTA DELLA SPESA ─────────────────────────────────────
+let shopListText = '';
+
+function openShopModal() {
+  if (!currentPlan) return;
+  document.getElementById('shopLoading').style.display = 'flex';
+  document.getElementById('shopResult').style.display = 'none';
+  document.getElementById('shopResult').innerHTML = '';
+  document.getElementById('copyShopBtn').disabled = true;
+  document.getElementById('shopModal').classList.add('active');
+  callClaudeForShopList();
+}
+
+async function callClaudeForShopList() {
+  const dishes = [];
+  currentPlan.forEach(d => { dishes.push(d.pranzo.name, d.cena.name); });
+  const uniqueDishes = [...new Set(dishes)];
+
+  const prompt = `Sei un assistente di cucina. Ecco i piatti del piano settimanale (pranzo e cena per 7 giorni):
+
+${uniqueDishes.map(n => '- ' + n).join('\n')}
+
+Genera la LISTA DELLA SPESA completa per cucinare questi piatti per una persona.
+Regole:
+- Raggruppa gli ingredienti per reparto del supermercato (es. "Pescheria", "Macelleria", "Frutta e verdura", "Dispensa e secchi", "Latticini e uova", "Pane e forno", "Altro").
+- Accorpa gli ingredienti che si ripetono in più piatti in una sola voce, sommando indicativamente le quantità.
+- Indica quantità realistiche e approssimative (es. "Pomodori – 500 g", "Limoni – 2").
+- Ometti acqua, sale e pepe.
+- Usa nomi in italiano.
+
+Rispondi SOLO con un oggetto JSON valido (niente testo extra, niente backtick), in questo formato:
+{
+  "reparti": [
+    { "nome": "Pescheria", "ingredienti": ["Salmone fresco – 400 g", "Gamberi – 300 g"] },
+    { "nome": "Frutta e verdura", "ingredienti": ["..."] }
+  ]
+}`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1200,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.map(b => b.text || '').join('') || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    renderShopList(parsed.reparti || []);
+  } catch (err) {
+    console.error('Errore lista spesa:', err);
+    document.getElementById('shopLoading').style.display = 'none';
+    const res = document.getElementById('shopResult');
+    res.style.display = 'block';
+    res.innerHTML = `<div class="shop-error">Errore nella generazione della lista. <button class="ai-retry-btn" onclick="callClaudeForShopList()">🔄 Riprova</button></div>`;
+  }
+}
+
+function renderShopList(reparti) {
+  document.getElementById('shopLoading').style.display = 'none';
+  const res = document.getElementById('shopResult');
+  res.style.display = 'block';
+
+  if (!reparti.length) {
+    res.innerHTML = '<div class="shop-empty">Nessun ingrediente trovato.</div>';
+    return;
+  }
+
+  // Testo per copia/email
+  let txt = `Lista della spesa – Settimana del ${currentWeekLabel}\n\n`;
+  let html = '';
+  reparti.forEach(rep => {
+    const items = rep.ingredienti || [];
+    if (!items.length) return;
+    txt += `${rep.nome}\n` + items.map(i => '  - ' + i).join('\n') + '\n\n';
+    html += `<div class="shop-cat"><h3>${rep.nome}</h3>`;
+    items.forEach(item => {
+      html += `<label class="shop-item"><input type="checkbox" onchange="this.closest('.shop-item').classList.toggle('checked', this.checked)"><span>${item}</span></label>`;
+    });
+    html += `</div>`;
+  });
+  shopListText = txt.trim();
+  res.innerHTML = html;
+  document.getElementById('copyShopBtn').disabled = false;
+}
+
+function copyShopList() {
+  if (!shopListText) return;
+  const btn = document.getElementById('copyShopBtn');
+  const done = () => { btn.textContent = '✓ Copiata'; setTimeout(() => btn.textContent = '📋 Copia lista', 1800); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(shopListText).then(done).catch(() => fallbackCopy(shopListText, done));
+  } else {
+    fallbackCopy(shopListText, done);
+  }
+}
+
+function fallbackCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); cb && cb(); } catch (e) {}
+  document.body.removeChild(ta);
+}
+
+function closeShopModal() {
+  document.getElementById('shopModal').classList.remove('active');
+}
+
 // ─── EMAIL ─────────────────────────────────────────────────
 function openEmailModal() {
   document.getElementById('emailModal').classList.add('active');
@@ -884,19 +1165,19 @@ function sendEmail() {
 }
 
 // close modals on backdrop click
-['emailModal','swapModal','aiModal'].forEach(id => {
+['emailModal','swapModal','aiModal','shopModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
-    if (e.target.id === id) window.close || e.target.classList.remove('active') || document.getElementById(id).classList.remove('active');
     if (e.target === document.getElementById(id)) {
       if (id === 'emailModal') closeEmailModal();
       if (id === 'swapModal') closeSwapModal();
       if (id === 'aiModal') closeAiModal();
+      if (id === 'shopModal') closeShopModal();
     }
   });
 });
 
 document.getElementById('weekLabel').textContent = 'Settimana ' + currentWeekLabel;
-console.log('%c[Piano] versione v2 caricata · settimana ' + currentWeekId + ' · Firebase ' + (db ? 'connesso' : 'NON configurato'), 'color:#c8522a;font-weight:bold');
+console.log('%c[Piano] versione v3 caricata · settimana ' + currentWeekId + ' · Firebase ' + (db ? 'connesso' : 'NON configurato'), 'color:#c8522a;font-weight:bold');
 
 // ─── INIT: carica il piano salvato di questa settimana, se esiste ─
 function showGridMessage(html) {
@@ -907,6 +1188,17 @@ function showGridMessage(html) {
 (async () => {
   document.getElementById('loadingOverlay').classList.add('active');
   document.getElementById('loadingText').textContent = 'Caricamento piano…';
+
+  // nomi predefiniti globali (per le nuove settimane)
+  if (db) {
+    try {
+      const ps = await db.ref('persone').get();
+      if (ps.exists() && ps.val()) {
+        const v = ps.val();
+        currentPeople = { p1: v.p1 || currentPeople.p1, p2: v.p2 || currentPeople.p2 };
+      }
+    } catch (e) { /* best effort */ }
+  }
 
   let saved = null;
   try {
@@ -926,11 +1218,13 @@ function showGridMessage(html) {
   }
 
   // Caso piano trovato: prova a disegnarlo, ma non lasciare mai la pagina bianca
-  if (saved) {
+  if (saved && saved.days) {
     try {
-      currentPlan = saved;
+      if (saved.people) currentPeople = { p1: saved.people.p1 || currentPeople.p1, p2: saved.people.p2 || currentPeople.p2 };
+      currentPlan = saved.days;
       renderPlan(currentPlan);
       document.getElementById('btnEmail').disabled = false;
+      document.getElementById('btnShop').disabled = false;
       showSaveStatus('📂 Piano caricato');
     } catch (e) {
       console.error('Errore rendering:', e);
