@@ -17,7 +17,7 @@
     --latticini: #8b6bb1; --uova: #d4a843; --affettati: #6b7c8d; --stella: #e85d75;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
 
   header { background: var(--ink); color: var(--bg); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; }
   header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
@@ -41,8 +41,8 @@
   .freq-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; color: white; }
   .freq-badge .count { font-weight: 700; }
 
-  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; margin-bottom: 40px; }
-  .day-col { background: var(--surface); border: 1px solid var(--border); min-width: 0; }
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 40px; }
+  .day-col { background: var(--surface); border: 1px solid var(--border); }
   .day-header { background: var(--ink); color: var(--bg); padding: 10px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; }
 
   .meal-slot { padding: 12px; border-bottom: 1px solid var(--border); min-height: 120px; }
@@ -63,7 +63,7 @@
   .meal-card { padding: 8px 10px; border-left: 3px solid; background: rgba(0,0,0,0.02); transition: background 0.2s; }
   .meal-card.just-changed { animation: highlight 0.7s ease; }
   @keyframes highlight { 0% { background: rgba(212,168,67,0.3); } 100% { background: rgba(0,0,0,0.02); } }
-  .meal-name { font-size: 0.8rem; font-weight: 500; line-height: 1.3; margin-bottom: 4px; overflow-wrap: anywhere; word-break: break-word; }
+  .meal-name { font-size: 0.8rem; font-weight: 500; line-height: 1.3; margin-bottom: 4px; }
   .meal-source { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; opacity: 0.7; }
 
   .src-pesce    { border-color: var(--pesce);    color: var(--pesce); }
