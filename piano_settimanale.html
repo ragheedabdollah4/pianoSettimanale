@@ -159,6 +159,14 @@
   .form-group label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
   .form-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
   .form-group input:focus { border-color: var(--accent); }
+  .form-group select { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+  .form-group select:focus { border-color: var(--accent); }
+  .custom-dishes { margin-top: 4px; }
+  .cdish-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1px solid var(--border); background: var(--bg); margin-bottom: 6px; font-size: 0.85rem; }
+  .cdish-item strong { font-weight: 500; }
+  .cdish-item em { font-style: normal; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-left: 6px; }
+  .cdish-rm { width: 26px; height: 26px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; border-radius: 4px; color: var(--muted); font-size: 0.8rem; line-height: 1; flex-shrink: 0; transition: all 0.15s; }
+  .cdish-rm:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
   .error-msg { background: #fee; border: 1px solid #fcc; color: #c00; padding: 12px; font-size: 0.82rem; margin-bottom: 16px; display: none; }
   .success-msg { background: #efe; border: 1px solid #cfc; color: #060; padding: 12px; font-size: 0.82rem; margin-bottom: 16px; display: none; }
@@ -246,6 +254,7 @@
   .dash-pct { font-family: 'Playfair Display', serif; font-size: 2.6rem; font-weight: 900; line-height: 1; color: var(--accent2); }
   .dash-pct .of { font-size: 0.95rem; color: var(--muted); font-weight: 400; font-family: 'DM Sans', sans-serif; margin-left: 8px; }
   .dash-label { font-size: 0.85rem; color: var(--muted); }
+  .dash-penalty { font-size: 0.76rem; color: var(--accent); font-weight: 600; }
   .dash-bar { height: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
   .dash-bar > span { display: block; height: 100%; background: var(--accent2); transition: width 0.4s ease; }
   .dash-subtitle { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin-bottom: 13px; }
@@ -415,10 +424,44 @@
   </div>
 </div>
 
+<!-- Aggiungi piatto modal -->
+<div class="modal-bg" id="addDishModal">
+  <div class="modal">
+    <h2>➕ Aggiungi un piatto</h2>
+    <p class="modal-subtitle">Verrà salvato e proposto nella generazione delle prossime settimane e tra le alternative di "Cambia".</p>
+    <div class="error-msg" id="addDishError"></div>
+    <div class="success-msg" id="addDishSuccess"></div>
+    <div class="form-group">
+      <label>Nome del piatto</label>
+      <input type="text" id="newDishName" placeholder="Es. Tonno scottato al sesamo" maxlength="60">
+    </div>
+    <div class="form-group">
+      <label>Fonte proteica</label>
+      <select id="newDishSource">
+        <option value="Pesce">Pesce</option>
+        <option value="Legumi">Legumi</option>
+        <option value="Carne Bianca">Carne Bianca</option>
+        <option value="Carne Rossa">Carne Rossa</option>
+        <option value="Latticini">Latticini</option>
+        <option value="Uova">Uova</option>
+        <option value="Affettati Magri">Affettati</option>
+        <option value="Stella">⭐ Stella</option>
+        <option value="Insalate">Insalate</option>
+      </select>
+    </div>
+    <div class="custom-dishes" id="customDishesList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="addCustomDish()">Salva piatto</button>
+      <button class="btn btn-secondary" onclick="closeAddDishModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <div class="controls">
     <button class="btn btn-primary" onclick="generatePlan()">🎲 Genera Piano</button>
     <button class="btn btn-shop" onclick="openShopModal()" id="btnShop" disabled>🛒 Lista della spesa</button>
+    <button class="btn btn-secondary" onclick="openAddDishModal()">➕ Aggiungi piatto</button>
     <button class="btn btn-email" onclick="openEmailModal()" id="btnEmail" disabled>📧 Invia via Email</button>
     <div class="week-label" id="weekInfo"></div>
   </div>
@@ -446,7 +489,7 @@
 </div>
 
 <script>
-const DISHES = [
+const BASE_DISHES = [
   { name: "Pollo e patate", source: "Carne Bianca" },
   { name: "Branzino al forno", source: "Pesce" },
   { name: "Poke Salmone", source: "Pesce" },
@@ -490,6 +533,11 @@ const DISHES = [
   { name: "Ristorante (libero)", source: "Stella" },
   { name: "Aperitivo Eataly", source: "Stella" },
 ];
+
+// Piatti effettivamente usati = predefiniti + piatti personalizzati del profilo
+let customDishes = [];                 // [{name, source}] caricati da Firebase
+let DISHES = BASE_DISHES.slice();
+function rebuildDishes() { DISHES = BASE_DISHES.concat(customDishes); }
 
 // Ingredienti per piatto (per la lista della spesa offline).
 // Categorie: P=Pescheria, M=Macelleria, V=Frutta e verdura, D=Dispensa e secchi, L=Latticini e uova, B=Pane e forno
@@ -882,6 +930,7 @@ function addSgarro(emoji) {
   day.sgarri.push(emoji);
   renderSgarriModal();
   updateDaySgarriStrip(sgarriTarget);
+  renderDashboard();
   savePlan();
 }
 
@@ -892,12 +941,68 @@ function removeSgarro(i) {
   day.sgarri.splice(i, 1);
   renderSgarriModal();
   updateDaySgarriStrip(sgarriTarget);
+  renderDashboard();
   savePlan();
 }
 
 function closeSgarriModal() {
   document.getElementById('sgarriModal').classList.remove('active');
   sgarriTarget = null;
+}
+
+// ─── PIATTI PERSONALIZZATI ─────────────────────────────────
+function saveCustomDishes() {
+  if (db && PROFILE_ID) dbSet('piatti/' + PROFILE_ID, customDishes).catch(() => {});
+}
+
+function openAddDishModal() {
+  document.getElementById('newDishName').value = '';
+  document.getElementById('addDishError').style.display = 'none';
+  document.getElementById('addDishSuccess').style.display = 'none';
+  renderCustomDishesList();
+  document.getElementById('addDishModal').classList.add('active');
+  setTimeout(() => document.getElementById('newDishName').focus(), 50);
+}
+
+function closeAddDishModal() {
+  document.getElementById('addDishModal').classList.remove('active');
+}
+
+function renderCustomDishesList() {
+  const el = document.getElementById('customDishesList');
+  if (!customDishes.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="sgarri-label">I tuoi piatti aggiunti</div>' +
+    customDishes.map((d, i) => `<div class="cdish-item">
+      <span><strong>${escapeHtml(d.name)}</strong><em>${escapeHtml(srcLabel(d.source))}</em></span>
+      <button class="cdish-rm" onclick="removeCustomDish(${i})" title="Rimuovi piatto">✕</button>
+    </div>`).join('');
+}
+
+function addCustomDish() {
+  const name = document.getElementById('newDishName').value.trim();
+  const source = document.getElementById('newDishSource').value;
+  const err = document.getElementById('addDishError');
+  const suc = document.getElementById('addDishSuccess');
+  err.style.display = 'none'; suc.style.display = 'none';
+  if (!name) { err.textContent = 'Inserisci il nome del piatto.'; err.style.display = 'block'; return; }
+  const dup = DISHES.some(d => d.name.toLowerCase() === name.toLowerCase() && d.source === source);
+  if (dup) { err.textContent = 'Questo piatto esiste già per questa fonte.'; err.style.display = 'block'; return; }
+
+  customDishes.push({ name: name, source: source });
+  rebuildDishes();
+  saveCustomDishes();
+  renderCustomDishesList();
+  document.getElementById('newDishName').value = '';
+  document.getElementById('newDishName').focus();
+  suc.textContent = '✓ "' + name + '" salvato: sarà proposto nelle prossime settimane e tra le alternative di "Cambia".';
+  suc.style.display = 'block';
+}
+
+function removeCustomDish(i) {
+  customDishes.splice(i, 1);
+  rebuildDishes();
+  saveCustomDishes();
+  renderCustomDishesList();
 }
 
 function escapeHtml(s) {
@@ -969,10 +1074,11 @@ function applyDishToCard(dayIdx, meal, dish) {
 function srcLabel(src) { return (FREQUENCIES[src] && FREQUENCIES[src].label) || src; }
 
 function computeStats() {
-  const stats = { total: 0, consumed: 0, p1: 0, p2: 0, perDay: [], perSource: {} };
+  const stats = { total: 0, consumed: 0, p1: 0, p2: 0, sgarri: 0, perDay: [], perSource: {} };
   if (!currentPlan) return stats;
   currentPlan.forEach(day => {
     let dC = 0, dT = 0;
+    stats.sgarri += Array.isArray(day.sgarri) ? day.sgarri.length : 0;
     ['pranzo', 'cena'].forEach(m => {
       const dish = day[m];
       if (!dish) return;
@@ -996,7 +1102,9 @@ function renderDashboard() {
   if (!currentPlan) { dash.classList.remove('show'); dash.innerHTML = ''; return; }
 
   const s = computeStats();
-  const pct = s.total ? Math.round(s.consumed / s.total * 100) : 0;
+  const rawPct = s.total ? Math.round(s.consumed / s.total * 100) : 0;
+  const penalty = s.sgarri * 5;                 // −5% per ogni sgarro
+  const pct = Math.max(0, rawPct - penalty);    // progresso penalizzato (min 0)
 
   // avanzamento per persona (solo coppie)
   let peopleHTML = '';
@@ -1033,9 +1141,17 @@ function renderDashboard() {
   }).join('');
 
   const remaining = s.total - s.consumed;
-  const headline = pct === 100
-    ? 'Settimana completata! 🎉'
-    : (remaining === 1 ? 'Manca 1 pasto da consumare' : remaining + ' pasti ancora da consumare');
+  let headline;
+  if (remaining === 0) {
+    headline = penalty > 0
+      ? 'Tutti i pasti consumati, ma gli sgarri pesano sul punteggio 🍿'
+      : 'Settimana completata! 🎉';
+  } else {
+    headline = (remaining === 1 ? 'Manca 1 pasto da consumare' : remaining + ' pasti ancora da consumare');
+  }
+  const penaltyHTML = penalty > 0
+    ? `<div class="dash-penalty">🍿 ${s.sgarri} sgarr${s.sgarri === 1 ? 'o' : 'i'} · −${penalty}% sul progresso</div>`
+    : '';
 
   dash.innerHTML = `
     <div class="dash-head">📊 Andamento della settimana</div>
@@ -1044,6 +1160,7 @@ function renderDashboard() {
         <div class="dash-pct">${pct}%<span class="of">${s.consumed}/${s.total} pasti</span></div>
         <div class="dash-label">${headline}</div>
         <div class="dash-bar"><span style="width:${pct}%"></span></div>
+        ${penaltyHTML}
         ${peopleHTML}
       </div>
       <div class="dash-card">
@@ -1396,7 +1513,7 @@ function sendEmail() {
 }
 
 // close modals on backdrop click
-['emailModal','swapModal','aiModal','shopModal','sgarriModal'].forEach(id => {
+['emailModal','swapModal','aiModal','shopModal','sgarriModal','addDishModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target === document.getElementById(id)) {
       if (id === 'emailModal') closeEmailModal();
@@ -1404,6 +1521,7 @@ function sendEmail() {
       if (id === 'aiModal') closeAiModal();
       if (id === 'shopModal') closeShopModal();
       if (id === 'sgarriModal') closeSgarriModal();
+      if (id === 'addDishModal') closeAddDishModal();
     }
   });
 });
@@ -1434,6 +1552,19 @@ function showGridMessage(html) {
         if (names[1]) currentPeople.p2 = names[1];
         const hs = document.getElementById('profileHeaderName');
         if (hs) hs.textContent = names.join(' & ');
+      }
+    } catch (e) { /* best effort */ }
+  }
+
+  // piatti personalizzati del profilo (uniti a quelli predefiniti)
+  if (db && PROFILE_ID) {
+    try {
+      const cd = await dbGet('piatti/' + PROFILE_ID);
+      if (cd) {
+        let arr = Array.isArray(cd) ? cd : Object.values(cd);
+        customDishes = (arr || []).filter(x => x && x.name && x.source)
+          .map(x => ({ name: x.name, source: x.source }));
+        rebuildDishes();
       }
     } catch (e) { /* best effort */ }
   }

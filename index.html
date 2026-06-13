@@ -250,7 +250,7 @@ function weekRow(weekId, monday, saved, isNow) {
   if (isNow) right += `<span class="badge now">Questa settimana</span>`;
   if (saved) {
     const p = planProgress(saved);
-    right += progressRing(p.pct, p.consumed, p.total);
+    right += progressRing(p);
     right += `<button class="week-del" title="Elimina il piano di questa settimana"
                 onclick="event.stopPropagation(); askDelete('${weekId}')">🗑</button>`;
   } else if (!isNow) {
@@ -274,23 +274,36 @@ function planProgress(saved) {
   let days = saved.days;
   if (days && !Array.isArray(days)) days = Object.values(days);
   const couple = !!(profile && profile.type === 'couple');
-  let total = 0, consumed = 0;
-  (days || []).forEach(d => ['pranzo', 'cena'].forEach(m => {
-    const dish = d && d[m];
-    if (!dish) return;
-    total++;
-    const dn = dish.done || {};
-    const done = couple ? (dn.p1 && dn.p2) : !!dn.p1;
-    if (done) consumed++;
-  }));
-  return { consumed, total, pct: total ? Math.round(consumed / total * 100) : 0 };
+  let total = 0, consumed = 0, sgarri = 0;
+  (days || []).forEach(d => {
+    if (d && d.sgarri) {
+      let sg = d.sgarri;
+      if (!Array.isArray(sg)) sg = Object.values(sg);
+      sgarri += sg.length;
+    }
+    ['pranzo', 'cena'].forEach(m => {
+      const dish = d && d[m];
+      if (!dish) return;
+      total++;
+      const dn = dish.done || {};
+      const done = couple ? (dn.p1 && dn.p2) : !!dn.p1;
+      if (done) consumed++;
+    });
+  });
+  const rawPct = total ? Math.round(consumed / total * 100) : 0;
+  const penalty = sgarri * 5;                    // −5% per ogni sgarro
+  const pct = Math.max(0, rawPct - penalty);
+  return { consumed, total, sgarri, penalty, pct };
 }
 
 // anello di avanzamento (SVG)
-function progressRing(pct, consumed, total) {
+function progressRing(p) {
+  const pct = p.pct;
   const r = 13, circ = 2 * Math.PI * r, off = circ * (1 - pct / 100);
   const color = pct === 100 ? 'var(--accent2)' : (pct > 0 ? 'var(--gold)' : 'var(--border)');
-  return `<div class="prog" title="${consumed}/${total} pasti consumati">
+  let title = p.consumed + '/' + p.total + ' pasti consumati';
+  if (p.penalty > 0) title += ' · ' + p.sgarri + ' sgarri (−' + p.penalty + '%)';
+  return `<div class="prog" title="${title}">
     <svg width="36" height="36" viewBox="0 0 36 36">
       <circle cx="18" cy="18" r="${r}" fill="none" stroke="var(--border)" stroke-width="4"></circle>
       <circle cx="18" cy="18" r="${r}" fill="none" stroke="${color}" stroke-width="4"
