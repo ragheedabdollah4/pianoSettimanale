@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍽 Piano Alimentare — Calendario</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#faf7f2; --surface:#fff; --ink:#1a1208; --muted:#7a6e5f;
+    --accent:#c8522a; --accent2:#4a7c59; --gold:#d4a843; --border:#e8e0d4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{overflow-x:hidden;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+
+  header{background:var(--ink);color:var(--bg);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;}
+  header h1{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;letter-spacing:-0.02em;}
+  .header-sub{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);font-weight:500;margin-top:2px;}
+  .fb-status{font-size:0.7rem;color:var(--gold);letter-spacing:0.06em;display:flex;align-items:center;gap:6px;}
+  .fb-dot{width:7px;height:7px;border-radius:50%;background:#aaa;flex-shrink:0;}
+  .fb-dot.ok{background:#4a7c59;}
+  .fb-dot.err{background:#c8522a;}
+
+  .container{max-width:1100px;margin:0 auto;padding:32px 24px;}
+  .year-nav{display:flex;align-items:center;gap:18px;margin-bottom:32px;}
+  .year-nav button{background:none;border:1px solid var(--border);padding:8px 18px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.88rem;transition:all 0.15s;}
+  .year-nav button:hover{background:var(--ink);color:white;border-color:var(--ink);}
+  .year-title{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;}
+
+  .stats-bar{display:flex;gap:18px;margin-bottom:28px;flex-wrap:wrap;}
+  .stat{background:var(--surface);border:1px solid var(--border);padding:14px 20px;}
+  .stat-n{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;color:var(--accent);}
+  .stat-l{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-top:2px;}
+
+  .months-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .month-block{background:var(--surface);border:1px solid var(--border);}
+  .month-title{background:var(--ink);color:var(--bg);padding:10px 14px;font-size:0.74rem;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;}
+  .weeks-list{padding:8px 0;}
+  .week-row{display:flex;align-items:center;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;}
+  .week-row:last-child{border-bottom:none;}
+  .week-row:hover{background:#f5f0e8;}
+  .week-row.has-plan{background:#f0f7f2;}
+  .week-row.has-plan:hover{background:#e4f0e9;}
+  .week-row.current-week{outline:2px solid var(--gold);outline-offset:-2px;}
+  .week-num{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:600;width:34px;text-align:center;padding:9px 0;flex-shrink:0;}
+  .week-dates{flex:1;padding:9px 10px 9px 2px;}
+  .week-date-range{font-size:0.76rem;font-weight:500;line-height:1.3;}
+  .week-preview{font-size:0.62rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
+  .week-badge{width:7px;height:7px;border-radius:50%;background:var(--accent2);flex-shrink:0;margin-right:10px;opacity:0;}
+  .week-row.has-plan .week-badge{opacity:1;}
+  .week-arrow{color:var(--muted);font-size:0.75rem;margin-right:10px;opacity:0;transition:opacity 0.12s;}
+  .week-row:hover .week-arrow{opacity:1;}
+
+  .loading-cal{text-align:center;padding:60px;color:var(--muted);font-family:'Playfair Display',serif;font-size:1.1rem;}
+  .spinner-sm{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media(max-width:900px){.months-grid{grid-template-columns:repeat(2,1fr)};header{padding:16px 20px};}
+  @media(max-width:600px){.months-grid{grid-template-columns:1fr};}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🍽 Piano Alimentare</h1>
+    <div class="header-sub">Calendario annuale</div>
+  </div>
+  <div class="fb-status">
+    <div class="fb-dot" id="fbDot"></div>
+    <span id="fbStatusText">Connessione...</span>
+  </div>
+</header>
+
+<div class="container">
+  <div class="year-nav">
+    <button onclick="changeYear(-1)">← Anno precedente</button>
+    <div class="year-title" id="yearTitle"></div>
+    <button onclick="changeYear(1)">Anno successivo →</button>
+  </div>
+  <div class="stats-bar" id="statsBar"></div>
+  <div id="monthsGrid" class="months-grid">
+    <div class="loading-cal" style="grid-column:1/-1"><span class="spinner-sm"></span>Caricamento piani...</div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
+  authDomain: "pianosettimanaledb.firebaseapp.com",
+  projectId: "pianosettimanaledb",
+  storageBucket: "pianosettimanaledb.firebasestorage.app",
+  messagingSenderId: "479375847867",
+  appId: "1:479375847867:web:4178c4657379b17343d49e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const MONTHS_IT = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+let calYear = new Date().getFullYear();
+let savedPlanKeys = new Set(); // set of week keys that have a saved plan
+let planPreviews = {}; // key -> preview string
+
+function weekKey(monday) {
+  const y = monday.getFullYear();
+  const m = String(monday.getMonth()+1).padStart(2,'0');
+  const d = String(monday.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+function getWeeksOfYear(year) {
+  const weeks = [];
+  const jan1 = new Date(year, 0, 1);
+  const dow = jan1.getDay();
+  const daysToMon = dow === 0 ? -6 : 1 - dow;
+  const firstMon = new Date(jan1);
+  firstMon.setDate(jan1.getDate() + daysToMon);
+  let mon = new Date(firstMon);
+  while (weeks.length <= 53) {
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    if (mon.getFullYear() > year) break;
+    if (sun.getFullYear() >= year || mon.getFullYear() === year)
+      weeks.push({ monday: new Date(mon), sunday: new Date(sun) });
+    mon.setDate(mon.getDate() + 7);
+  }
+  return weeks;
+}
+
+function formatDate(d) { return d.toLocaleDateString('it-IT', { day:'2-digit', month:'short' }); }
+
+function isCurrentWeek(mon, sun) {
+  const t = new Date(); t.setHours(0,0,0,0);
+  return t >= mon && t <= sun;
+}
+
+function isoWeekNum(monday) {
+  const jan4 = new Date(monday.getFullYear(), 0, 4);
+  return Math.ceil(((monday - jan4) / 86400000 + jan4.getDay() + 1) / 7);
+}
+
+function setFbStatus(ok, text) {
+  document.getElementById('fbDot').className = 'fb-dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('fbStatusText').textContent = text;
+}
+
+async function loadAllSavedKeys() {
+  try {
+    const snap = await getDocs(collection(db, 'piani'));
+    savedPlanKeys = new Set();
+    planPreviews = {};
+    snap.forEach(docSnap => {
+      const key = docSnap.id;
+      savedPlanKeys.add(key);
+      const plan = docSnap.data().plan;
+      if (plan && plan.length) {
+        planPreviews[key] = plan.slice(0,3).map(d => d.pranzo?.name || '').filter(Boolean).join(' · ');
+      }
+    });
+    setFbStatus(true, `${savedPlanKeys.size} piani salvati`);
+  } catch(e) {
+    setFbStatus(false, 'Errore connessione');
+    console.error(e);
+  }
+}
+
+function changeYear(delta) { calYear += delta; render(); window.scrollTo(0,0); }
+window.changeYear = changeYear;
+
+function render() {
+  document.getElementById('yearTitle').textContent = calYear;
+  const allWeeks = getWeeksOfYear(calYear);
+  const yearKeys = new Set(allWeeks.map(w => weekKey(w.monday)));
+  const savedCount = [...savedPlanKeys].filter(k => yearKeys.has(k)).length;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><div class="stat-n">${allWeeks.length}</div><div class="stat-l">Settimane totali</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--accent2)">${savedCount}</div><div class="stat-l">Piani salvati</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--gold)">${allWeeks.length - savedCount}</div><div class="stat-l">Senza piano</div></div>
+  `;
+
+  const byMonth = {};
+  for (const w of allWeeks) {
+    const m = w.monday.getMonth();
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(w);
+  }
+
+  const grid = document.getElementById('monthsGrid'); grid.innerHTML = '';
+  for (let m = 0; m < 12; m++) {
+    const weeks = byMonth[m] || []; if (!weeks.length) continue;
+    const block = document.createElement('div'); block.className = 'month-block';
+    block.innerHTML = `<div class="month-title">${MONTHS_IT[m]} ${calYear}</div><div class="weeks-list"></div>`;
+    grid.appendChild(block);
+    const list = block.querySelector('.weeks-list');
+    weeks.forEach(w => {
+      const key = weekKey(w.monday);
+      const hasPlan = savedPlanKeys.has(key);
+      const preview = planPreviews[key] || '';
+      const label = `${formatDate(w.monday)} – ${formatDate(w.sunday)}`;
+      const cur = isCurrentWeek(w.monday, w.sunday);
+      const wn = isoWeekNum(w.monday);
+      const row = document.createElement('div');
+      row.className = 'week-row' + (hasPlan ? ' has-plan' : '') + (cur ? ' current-week' : '');
+      row.innerHTML = `
+        <div class="week-num">W${wn}</div>
+        <div class="week-dates">
+          <div class="week-date-range">${label}${cur ? ' <span style="color:var(--gold);font-size:0.6rem">● oggi</span>' : ''}</div>
+          <div class="week-preview">${hasPlan ? preview : '<em>Nessun piano</em>'}</div>
+        </div>
+        <div class="week-badge"></div>
+        <div class="week-arrow">→</div>
+      `;
+      row.onclick = () => {
+        window.location.href = `piano_settimanale.html?week=${encodeURIComponent(key)}&label=${encodeURIComponent(label)}`;
+      };
+      list.appendChild(row);
+    });
+  }
+
+  setTimeout(() => {
+    const el = document.querySelector('.current-week');
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 150);
+}
+
+// Init
+(async () => {
+  await loadAllSavedKeys();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -6,185 +6,150 @@
 <title>Piano Alimentare Settimanale</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
-
   :root {
-    --bg: #faf7f2; --surface: #ffffff; --ink: #1a1208; --muted: #7a6e5f;
-    --accent: #c8522a; --accent2: #4a7c59; --gold: #d4a843; --border: #e8e0d4;
-    --pesce: #3b82c4; --legumi: #4a7c59; --bianca: #e8a23a; --rossa: #c8522a;
-    --latticini: #8b6bb1; --uova: #d4a843; --affettati: #6b7c8d; --stella: #e85d75;
+    --bg:#faf7f2; --surface:#fff; --ink:#1a1208; --muted:#7a6e5f;
+    --accent:#c8522a; --accent2:#4a7c59; --gold:#d4a843; --border:#e8e0d4;
+    --pesce:#3b82c4; --legumi:#4a7c59; --bianca:#e8a23a; --rossa:#c8522a;
+    --latticini:#8b6bb1; --uova:#d4a843; --affettati:#6b7c8d; --stella:#e85d75;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{overflow-x:hidden;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
 
-  header { background: var(--ink); color: var(--bg); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; }
-  header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
-  header span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); font-weight: 500; }
+  header{background:var(--ink);color:var(--bg);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+  header h1{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;letter-spacing:-0.02em;}
 
-  .container { max-width: 1300px; margin: 0 auto; padding: 40px 32px; }
-  .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; }
+  .container{width:100%;padding:16px 16px 24px;}
+  .controls{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .btn{font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:500;padding:9px 16px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:0.07em;transition:all 0.2s;white-space:nowrap;}
+  .btn-primary{background:var(--accent);color:white;} .btn-primary:hover{background:#a8411d;}
+  .btn-secondary{background:var(--ink);color:var(--bg);} .btn-secondary:hover{background:#333;}
+  .btn-email{background:var(--accent2);color:white;} .btn-email:hover{background:#3a6347;}
+  .btn-gold{background:var(--gold);color:var(--ink);} .btn-gold:hover{background:#b8912e;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .week-info-text{font-family:'Playfair Display',serif;font-size:0.9rem;color:var(--muted);}
 
-  .btn { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 12px 24px; border: none; border-radius: 0; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.2s; }
-  .btn-primary { background: var(--accent); color: white; }
-  .btn-primary:hover { background: #a8411d; }
-  .btn-secondary { background: var(--ink); color: var(--bg); }
-  .btn-secondary:hover { background: #333; }
-  .btn-email { background: var(--accent2); color: white; }
-  .btn-email:hover { background: #3a6347; }
-  .btn-gold { background: var(--gold); color: var(--ink); }
-  .btn-gold:hover { background: #b8912e; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .freq-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .freq-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:0.7rem;font-weight:500;color:white;}
+  .freq-badge .count{font-weight:700;}
 
-  .week-label { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--muted); }
+  .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:20px;width:100%;}
+  .day-col{background:var(--surface);border:1px solid var(--border);min-width:0;}
+  .day-header{background:var(--ink);color:var(--bg);padding:7px 4px;text-align:center;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:500;}
+  .meal-slot{padding:7px;border-bottom:1px solid var(--border);}
+  .meal-slot:last-child{border-bottom:none;}
+  .meal-label{font-size:0.58rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:5px;font-weight:500;display:flex;align-items:flex-start;justify-content:space-between;gap:4px;}
+  .meal-actions{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
+  .swap-btn{font-size:0.52rem;padding:1px 4px;border:1px solid var(--border);background:transparent;cursor:pointer;border-radius:2px;color:var(--muted);font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.03em;transition:all 0.15s;line-height:1.6;white-space:nowrap;}
+  .swap-btn:hover{background:var(--ink);color:white;border-color:var(--ink);}
+  .swap-btn.ai{border-color:var(--gold);color:#a07a20;}
+  .swap-btn.ai:hover{background:var(--gold);color:var(--ink);border-color:var(--gold);}
+  .meal-card{padding:6px 7px;border-left:3px solid;background:rgba(0,0,0,0.02);transition:background 0.2s;}
+  .meal-card.just-changed{animation:highlight 0.7s ease;}
+  @keyframes highlight{0%{background:rgba(212,168,67,0.3);}100%{background:rgba(0,0,0,0.02);}}
+  .meal-name{font-size:0.72rem;font-weight:500;line-height:1.3;margin-bottom:3px;word-break:break-word;}
+  .meal-source{font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:500;opacity:0.7;}
+  .src-pesce{border-color:var(--pesce);color:var(--pesce);}
+  .src-legumi{border-color:var(--legumi);color:var(--legumi);}
+  .src-bianca{border-color:var(--bianca);color:var(--bianca);}
+  .src-rossa{border-color:var(--rossa);color:var(--rossa);}
+  .src-latticini{border-color:var(--latticini);color:var(--latticini);}
+  .src-uova{border-color:var(--uova);color:var(--uova);}
+  .src-affettati{border-color:var(--affettati);color:var(--affettati);}
+  .src-stella{border-color:var(--stella);color:var(--stella);}
+  .src-insalate{border-color:#aaa;color:#888;}
 
-  .freq-bar { display: flex; gap: 10px; margin-bottom: 36px; flex-wrap: wrap; }
-  .freq-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; color: white; }
-  .freq-badge .count { font-weight: 700; }
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:0.7rem;font-weight:500;}
+  .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
 
-  .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 40px; }
-  .day-col { background: var(--surface); border: 1px solid var(--border); }
-  .day-header { background: var(--ink); color: var(--bg); padding: 10px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; }
+  .loading-overlay{display:none;position:fixed;inset:0;background:rgba(26,18,8,0.75);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:var(--bg);}
+  .loading-overlay.active{display:flex;}
+  .spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,0.2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-family:'Playfair Display',serif;font-size:1rem;}
 
-  .meal-slot { padding: 12px; border-bottom: 1px solid var(--border); min-height: 120px; }
-  .meal-slot:last-child { border-bottom: none; }
-  .meal-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; }
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(26,18,8,0.6);z-index:200;align-items:center;justify-content:center;}
+  .modal-bg.active{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);padding:32px 36px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+  .modal h2{font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:4px;}
+  .modal-subtitle{color:var(--muted);font-size:0.8rem;margin-bottom:18px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:5px;font-weight:500;}
+  .form-group input{width:100%;padding:11px 13px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;transition:border-color 0.2s;}
+  .form-group input:focus{border-color:var(--accent);}
+  .error-msg{background:#fee;border:1px solid #fcc;color:#c00;padding:10px;font-size:0.8rem;margin-bottom:14px;display:none;}
+  .success-msg{background:#efe;border:1px solid #cfc;color:#060;padding:10px;font-size:0.8rem;margin-bottom:14px;display:none;}
 
-  .meal-actions { display: flex; gap: 4px; }
-  .swap-btn {
-    font-size: 0.58rem; padding: 2px 6px; border: 1px solid var(--border);
-    background: transparent; cursor: pointer; border-radius: 2px; color: var(--muted);
-    font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.05em;
-    transition: all 0.15s; line-height: 1.6; white-space: nowrap;
-  }
-  .swap-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
-  .swap-btn.ai { border-color: var(--gold); color: #a07a20; }
-  .swap-btn.ai:hover { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+  .swap-context{background:var(--bg);border:1px solid var(--border);padding:11px 13px;margin-bottom:16px;font-size:0.8rem;}
+  .swap-context strong{display:block;font-size:0.88rem;margin-bottom:2px;}
+  .swap-context .src-tag{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;opacity:0.8;}
+  .source-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+  .source-tab{font-size:0.65rem;padding:3px 9px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.06em;transition:all 0.15s;border-radius:2px;}
+  .source-tab.active{color:white;border-color:transparent;}
+  .source-tab:hover:not(.active){border-color:var(--ink);}
+  .alternatives-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;}
+  .alt-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--border);cursor:pointer;transition:all 0.12s;background:var(--surface);}
+  .alt-item:hover{border-color:var(--ink);background:var(--bg);}
+  .alt-item.selected{border-color:var(--accent2);background:#f0f7f2;}
+  .alt-item-name{font-size:0.82rem;font-weight:500;}
+  .alt-item-src{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);}
+  .check-icon{font-size:0.95rem;opacity:0;}
+  .alt-item.selected .check-icon{opacity:1;}
+  .no-alts{color:var(--muted);font-size:0.82rem;font-style:italic;padding:10px 0;}
+  .custom-section{margin-top:14px;border-top:1px dashed var(--border);padding-top:12px;}
+  .custom-section-label{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:7px;font-weight:600;}
+  .custom-row{display:flex;gap:7px;align-items:stretch;}
+  .custom-name-input{flex:1;padding:8px 10px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:0.83rem;outline:none;transition:border-color 0.2s;}
+  .custom-name-input:focus{border-color:var(--accent);}
+  .custom-source-select{padding:8px 7px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:0.75rem;outline:none;cursor:pointer;}
+  .btn-custom-add{padding:8px 12px;font-size:0.72rem;background:var(--ink);color:white;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.05em;transition:background 0.15s;white-space:nowrap;}
+  .btn-custom-add:hover{background:var(--accent);}
+  .custom-warning{font-size:0.7rem;color:#a07a20;margin-top:5px;background:#fffbe6;border:1px solid #ffe8a0;padding:5px 9px;display:none;}
 
-  .meal-card { padding: 8px 10px; border-left: 3px solid; background: rgba(0,0,0,0.02); transition: background 0.2s; }
-  .meal-card.just-changed { animation: highlight 0.7s ease; }
-  @keyframes highlight { 0% { background: rgba(212,168,67,0.3); } 100% { background: rgba(0,0,0,0.02); } }
-  .meal-name { font-size: 0.8rem; font-weight: 500; line-height: 1.3; margin-bottom: 4px; }
-  .meal-source { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; opacity: 0.7; }
+  .ai-suggest-box{border:1px solid var(--gold);padding:18px;margin-bottom:16px;background:#fffdf5;min-height:90px;}
+  .ai-label{font-size:0.63rem;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;color:var(--gold);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+  .ai-suggest-dish{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;margin-bottom:5px;color:var(--ink);}
+  .ai-suggest-source{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:10px;}
+  .ai-suggest-reason{font-size:0.8rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--border);padding-top:9px;margin-top:3px;}
+  .ai-loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:0.83rem;padding:14px 0;}
+  .ai-spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+  .ai-retry-btn{font-size:0.7rem;padding:3px 9px;background:transparent;border:1px solid var(--gold);color:#a07a20;cursor:pointer;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.06em;margin-top:9px;transition:all 0.15s;}
+  .ai-retry-btn:hover{background:var(--gold);color:var(--ink);}
 
-  .src-pesce    { border-color: var(--pesce);    color: var(--pesce); }
-  .src-legumi   { border-color: var(--legumi);   color: var(--legumi); }
-  .src-bianca   { border-color: var(--bianca);   color: var(--bianca); }
-  .src-rossa    { border-color: var(--rossa);    color: var(--rossa); }
-  .src-latticini{ border-color: var(--latticini);color: var(--latticini); }
-  .src-uova     { border-color: var(--uova);     color: var(--uova); }
-  .src-affettati{ border-color: var(--affettati);color: var(--affettati); }
-  .src-stella   { border-color: var(--stella);   color: var(--stella); }
-  .src-insalate { border-color: #aaa;            color: #888; }
+  .shop-modal{width:620px;}
+  .shop-loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:0.88rem;padding:20px 0;}
+  .shop-content{display:none;}
+  .shop-category{margin-bottom:18px;}
+  .shop-category-title{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:7px;padding-bottom:5px;border-bottom:2px solid;}
+  .shop-item{display:flex;align-items:baseline;gap:9px;padding:4px 0;font-size:0.85rem;border-bottom:1px dotted var(--border);}
+  .shop-item:last-child{border-bottom:none;}
+  .shop-qty{font-weight:600;min-width:72px;font-size:0.8rem;}
+  .shop-item-name{flex:1;}
+  .shop-item-note{font-size:0.7rem;color:var(--muted);font-style:italic;}
+  .shop-print-btn{font-size:0.76rem;padding:7px 14px;background:var(--ink);color:white;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.06em;transition:background 0.15s;}
+  .shop-print-btn:hover{background:var(--accent);}
 
-  /* Loading */
-  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(26,18,8,0.7); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 16px; color: var(--bg); }
-  .loading-overlay.active { display: flex; }
-  .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-family: 'Playfair Display', serif; font-size: 1.1rem; }
-
-  /* Modals */
-  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(26,18,8,0.6); z-index: 200; align-items: center; justify-content: center; }
-  .modal-bg.active { display: flex; }
-  .modal { background: var(--surface); border: 1px solid var(--border); padding: 36px 40px; width: 560px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
-  .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 4px; }
-  .modal-subtitle { color: var(--muted); font-size: 0.82rem; margin-bottom: 20px; }
-  .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
-
-  .form-group { margin-bottom: 16px; }
-  .form-group label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
-  .form-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
-  .form-group input:focus { border-color: var(--accent); }
-
-  .error-msg { background: #fee; border: 1px solid #fcc; color: #c00; padding: 12px; font-size: 0.82rem; margin-bottom: 16px; display: none; }
-  .success-msg { background: #efe; border: 1px solid #cfc; color: #060; padding: 12px; font-size: 0.82rem; margin-bottom: 16px; display: none; }
-
-  /* Swap modal */
-  .swap-context { background: var(--bg); border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 18px; font-size: 0.82rem; }
-  .swap-context strong { display: block; font-size: 0.9rem; margin-bottom: 2px; }
-  .swap-context .src-tag { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; opacity: 0.8; }
-
-  /* Source filter tabs in swap modal */
-  .source-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-  .source-tab { font-size: 0.68rem; padding: 4px 10px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; transition: all 0.15s; border-radius: 2px; }
-  .source-tab.active { color: white; border-color: transparent; }
-  .source-tab:hover:not(.active) { border-color: var(--ink); }
-
-  .alternatives-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
-  .alt-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; background: var(--surface); }
-  .alt-item:hover { border-color: var(--ink); background: var(--bg); }
-  .alt-item.selected { border-color: var(--accent2); background: #f0f7f2; }
-  .alt-item-name { font-size: 0.85rem; font-weight: 500; }
-  .alt-item-src { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-  .check-icon { font-size: 1rem; opacity: 0; }
-  .alt-item.selected .check-icon { opacity: 1; }
-  .no-alts { color: var(--muted); font-size: 0.85rem; font-style: italic; padding: 12px 0; }
-
-  /* Custom dish section */
-  .custom-section { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 14px; }
-  .custom-section-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
-  .custom-row { display: flex; gap: 8px; align-items: stretch; }
-  .custom-name-input { flex: 1; padding: 9px 11px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.2s; }
-  .custom-name-input:focus { border-color: var(--accent); }
-  .custom-source-select { padding: 9px 8px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; outline: none; cursor: pointer; }
-  .custom-source-select:focus { border-color: var(--accent); }
-  .btn-custom-add { padding: 9px 14px; font-size: 0.75rem; background: var(--ink); color: white; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; transition: background 0.15s; white-space: nowrap; }
-  .btn-custom-add:hover { background: var(--accent); }
-  .custom-warning { font-size: 0.72rem; color: #a07a20; margin-top: 6px; background: #fffbe6; border: 1px solid #ffe8a0; padding: 6px 10px; display: none; }
-
-  /* AI Suggest modal */
-  .ai-suggest-box { border: 1px solid var(--gold); padding: 20px; margin-bottom: 18px; background: #fffdf5; position: relative; min-height: 100px; }
-  .ai-suggest-box .ai-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; color: var(--gold); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-  .ai-suggest-dish { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; color: var(--ink); }
-  .ai-suggest-source { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 12px; }
-  .ai-suggest-reason { font-size: 0.82rem; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px; }
-  .ai-loading { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; padding: 16px 0; }
-  .ai-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-  .ai-retry-btn { font-size: 0.72rem; padding: 4px 10px; background: transparent; border: 1px solid var(--gold); color: #a07a20; cursor: pointer; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 10px; transition: all 0.15s; }
-  .ai-retry-btn:hover { background: var(--gold); color: var(--ink); }
-
-  /* Shopping list modal */
-  .shop-modal { width: 640px; }
-  .shop-loading { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.9rem; padding: 24px 0; }
-  .shop-content { display: none; }
-  .shop-category { margin-bottom: 20px; }
-  .shop-category-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; padding-bottom: 6px; border-bottom: 2px solid; }
-  .shop-item { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; font-size: 0.88rem; border-bottom: 1px dotted var(--border); }
-  .shop-item:last-child { border-bottom: none; }
-  .shop-qty { font-weight: 600; min-width: 80px; font-size: 0.82rem; }
-  .shop-item-name { flex: 1; }
-  .shop-item-note { font-size: 0.72rem; color: var(--muted); font-style: italic; }
-  .shop-print-btn { font-size: 0.78rem; padding: 8px 16px; background: var(--ink); color: white; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; transition: background 0.15s; }
-  .shop-print-btn:hover { background: var(--accent); }
-
-  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 2px; }
-
-  @media (max-width: 900px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
-    header { padding: 20px 24px; }
-    header h1 { font-size: 1.4rem; }
-    .container { padding: 24px 16px; }
-  }
-
-  @media print {
-    header, .controls, .legend, .freq-bar, .swap-btn, .meal-actions { display: none !important; }
-    .modal-bg { display: block !important; position: static !important; background: none !important; }
-    .modal { box-shadow: none !important; border: none !important; }
+  @media(max-width:700px){
+    .grid{grid-template-columns:repeat(2,1fr);}
+    .swap-btn{display:none;}
+    header{padding:12px 16px;}
+    .container{padding:12px 10px 20px;}
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div style="display:flex;align-items:center;gap:20px;">
-    <a href="index.html" style="color:var(--gold);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.1em;text-decoration:none;border:1px solid rgba(212,168,67,0.4);padding:6px 14px;transition:all 0.15s;" onmouseover="this.style.background='rgba(212,168,67,0.15)'" onmouseout="this.style.background='transparent'">← Calendario</a>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <a href="calendario.html" style="color:var(--gold);font-size:0.76rem;text-transform:uppercase;letter-spacing:0.1em;text-decoration:none;border:1px solid rgba(212,168,67,0.4);padding:5px 12px;transition:all 0.15s;" onmouseover="this.style.background='rgba(212,168,67,0.15)'" onmouseout="this.style.background='transparent'">← Calendario</a>
     <div>
       <h1>🍽 Piano Alimentare</h1>
-      <span id="weekLabel" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.15em;color:var(--gold);font-weight:500;">Settimanale personalizzato</span>
+      <span id="weekLabel" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);font-weight:500;">Settimanale personalizzato</span>
     </div>
   </div>
-  <div id="saveStatus" style="font-size:0.75rem;color:var(--gold);letter-spacing:0.08em;opacity:0;transition:opacity 0.4s;"></div>
+  <div id="saveStatus" style="font-size:0.72rem;color:var(--gold);letter-spacing:0.08em;opacity:0;transition:opacity 0.4s;text-align:right;"></div>
 </header>
 
 <div class="loading-overlay" id="loadingOverlay">
@@ -200,7 +165,7 @@
     <div class="error-msg" id="emailError"></div>
     <div class="success-msg" id="emailSuccess"></div>
     <div class="form-group">
-      <label>Il tuo indirizzo email</label>
+      <label>Indirizzo email</label>
       <input type="email" id="emailInput" placeholder="nome@esempio.it">
     </div>
     <div class="modal-actions">
@@ -210,19 +175,14 @@
   </div>
 </div>
 
-<!-- Manual swap modal -->
+<!-- Swap modal -->
 <div class="modal-bg" id="swapModal">
   <div class="modal">
     <h2>🔄 Cambia Pasto</h2>
     <p class="modal-subtitle">Scegli dalla lista o inserisci un piatto personalizzato — anche con fonte proteica diversa.</p>
     <div class="swap-context" id="swapContext"></div>
-
-    <!-- Source filter tabs -->
     <div class="source-tabs" id="sourceTabs"></div>
-
     <div class="alternatives-list" id="alternativesList"></div>
-
-    <!-- Custom dish entry -->
     <div class="custom-section">
       <div class="custom-section-label">✏ Oppure scrivi un piatto personalizzato</div>
       <div class="custom-row">
@@ -242,7 +202,6 @@
       </div>
       <div class="custom-warning" id="customWarning"></div>
     </div>
-
     <div class="modal-actions">
       <button class="btn btn-primary" id="confirmSwapBtn" onclick="confirmSwap()" disabled>Conferma</button>
       <button class="btn btn-secondary" onclick="closeSwapModal()">Annulla</button>
@@ -250,17 +209,14 @@
   </div>
 </div>
 
-<!-- AI Suggest modal -->
+<!-- AI modal -->
 <div class="modal-bg" id="aiModal">
   <div class="modal">
     <h2>✨ Suggerimento AI</h2>
-    <p class="modal-subtitle">Claude suggerisce un'alternativa adatta al tuo piano, scelta tra i piatti disponibili.</p>
+    <p class="modal-subtitle">Claude suggerisce un'alternativa dalla lista dei piatti disponibili.</p>
     <div class="swap-context" id="aiContext"></div>
-    <div class="ai-suggest-box" id="aiSuggestBox">
-      <div class="ai-loading" id="aiLoading">
-        <div class="ai-spinner"></div>
-        <span>Claude sta pensando al piatto perfetto...</span>
-      </div>
+    <div class="ai-suggest-box">
+      <div class="ai-loading" id="aiLoading"><div class="ai-spinner"></div><span>Claude sta pensando al piatto perfetto...</span></div>
       <div id="aiResult" style="display:none"></div>
     </div>
     <div class="modal-actions">
@@ -270,18 +226,15 @@
   </div>
 </div>
 
-<!-- Shopping list modal -->
+<!-- Shopping modal -->
 <div class="modal-bg" id="shopModal">
   <div class="modal shop-modal">
     <h2>🛒 Lista della Spesa</h2>
-    <p class="modal-subtitle" id="shopSubtitle">Per 2 persone, basata sul piano della settimana.</p>
-    <div class="shop-loading" id="shopLoading">
-      <div class="ai-spinner"></div>
-      <span>Claude sta preparando la lista della spesa...</span>
-    </div>
+    <p class="modal-subtitle">Per 2 persone, basata sul piano della settimana.</p>
+    <div class="shop-loading" id="shopLoading"><div class="ai-spinner"></div><span>Claude sta preparando la lista...</span></div>
     <div class="shop-content" id="shopContent"></div>
     <div class="modal-actions">
-      <button class="shop-print-btn" onclick="printShoppingList()" id="shopPrintBtn" style="display:none">🖨 Stampa / Salva PDF</button>
+      <button class="shop-print-btn" onclick="window.print()" id="shopPrintBtn" style="display:none">🖨 Stampa / PDF</button>
       <button class="btn btn-secondary" onclick="closeShopModal()">Chiudi</button>
     </div>
   </div>
@@ -290,11 +243,10 @@
 <div class="container">
   <div class="controls">
     <button class="btn btn-primary" onclick="generatePlan()">🎲 Genera Piano</button>
-    <button class="btn btn-email" onclick="openEmailModal()" id="btnEmail" disabled>📧 Invia Email</button>
+    <button class="btn btn-email" onclick="openEmailModal()" id="btnEmail" disabled>📧 Email</button>
     <button class="btn btn-gold" onclick="openShopModal()" id="btnShop" disabled>🛒 Lista Spesa</button>
-    <div class="week-label" id="weekInfo"></div>
+    <div class="week-info-text" id="weekInfo"></div>
   </div>
-
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:var(--pesce)"></div>Pesce</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--legumi)"></div>Legumi</div>
@@ -305,78 +257,86 @@
     <div class="legend-item"><div class="legend-dot" style="background:var(--affettati)"></div>Affettati</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--stella)"></div>⭐ Stella</div>
   </div>
-
   <div class="freq-bar" id="freqBar"></div>
-
   <div class="grid" id="planGrid">
-    <div style="grid-column:1/-1; text-align:center; padding: 60px; color: var(--muted); font-family: 'Playfair Display', serif; font-size: 1.2rem;">
-      Clicca "Genera Piano" per creare il tuo piano settimanale personalizzato
+    <div style="grid-column:1/-1;text-align:center;padding:50px;color:var(--muted);font-family:'Playfair Display',serif;font-size:1rem;">
+      Clicca "Genera Piano" per creare il tuo piano settimanale
     </div>
   </div>
 </div>
 
-<script>
+<!-- Firebase + app logic -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
+  authDomain: "pianosettimanaledb.firebaseapp.com",
+  projectId: "pianosettimanaledb",
+  storageBucket: "pianosettimanaledb.firebasestorage.app",
+  messagingSenderId: "479375847867",
+  appId: "1:479375847867:web:4178c4657379b17343d49e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ── DATA ─────────────────────────────────────────── */
 const DISHES = [
-  { name: "Pollo e patate", source: "Carne Bianca" },
-  { name: "Branzino al forno", source: "Pesce" },
-  { name: "Poke Salmone", source: "Pesce" },
-  { name: "Poke Tonno", source: "Pesce" },
-  { name: "Grigliata di tonno", source: "Pesce" },
-  { name: "Udon gamberetti zucchine e carote", source: "Pesce" },
-  { name: "Risotto frutti di mare", source: "Pesce" },
-  { name: "Risotto gamberi", source: "Pesce" },
-  { name: "Lupo di mare", source: "Pesce" },
-  { name: "Salmone al forno con arancia", source: "Pesce" },
-  { name: "Salmone con salsa norvegese", source: "Pesce" },
-  { name: "Zuppa di lenticchie", source: "Legumi" },
-  { name: "Pasta e fagioli", source: "Legumi" },
-  { name: "Hummus", source: "Legumi" },
-  { name: "Insalata di couscous/riso con legumi", source: "Legumi" },
-  { name: "Polpette con legumi", source: "Legumi" },
-  { name: "Falafel", source: "Legumi" },
-  { name: "Pollo alle mandorle", source: "Carne Bianca" },
-  { name: "Cosce di pollo al vino", source: "Carne Bianca" },
-  { name: "Pollo speziato all'arancia", source: "Carne Bianca" },
-  { name: "Pollo marinato", source: "Carne Bianca" },
-  { name: "Pollo alla griglia", source: "Carne Bianca" },
-  { name: "Pollo al curry", source: "Carne Bianca" },
-  { name: "Filetto alla griglia", source: "Carne Rossa" },
-  { name: "Polpette al sugo", source: "Carne Rossa" },
-  { name: "Hamburger", source: "Carne Rossa" },
-  { name: "Insalata di farro con feta", source: "Latticini" },
-  { name: "Polpettone veg e ricotta", source: "Latticini" },
-  { name: "Pasta al pomodoro con parmigiano/grana", source: "Latticini" },
-  { name: "Insalata melone e feta", source: "Latticini" },
-  { name: "Frittata asparagi", source: "Uova" },
-  { name: "Frittata porro e zucchine", source: "Uova" },
-  { name: "Uova (generico)", source: "Uova" },
-  { name: "Fattoush con crostini di pane", source: "Insalate" },
-  { name: "Insalata di finocchio", source: "Insalate" },
-  { name: "Insalata pomodoro e cipolla", source: "Insalate" },
-  { name: "Piadina con affettati", source: "Affettati Magri" },
-  { name: "Pizza", source: "Stella" },
-  { name: "Sushi", source: "Stella" },
-  { name: "Ristorante (libero)", source: "Stella" },
-  { name: "Aperitivo Eataly", source: "Stella" },
-  // NOTE: "Pollo allo spiedo" is fixed to Giovedì pranzo — not in random pool
+  {name:"Pollo e patate",source:"Carne Bianca"},
+  {name:"Branzino al forno",source:"Pesce"},
+  {name:"Poke Salmone",source:"Pesce"},
+  {name:"Poke Tonno",source:"Pesce"},
+  {name:"Grigliata di tonno",source:"Pesce"},
+  {name:"Udon gamberetti zucchine e carote",source:"Pesce"},
+  {name:"Risotto frutti di mare",source:"Pesce"},
+  {name:"Risotto gamberi",source:"Pesce"},
+  {name:"Lupo di mare",source:"Pesce"},
+  {name:"Salmone al forno con arancia",source:"Pesce"},
+  {name:"Salmone con salsa norvegese",source:"Pesce"},
+  {name:"Zuppa di lenticchie",source:"Legumi"},
+  {name:"Pasta e fagioli",source:"Legumi"},
+  {name:"Hummus",source:"Legumi"},
+  {name:"Insalata di couscous/riso con legumi",source:"Legumi"},
+  {name:"Polpette con legumi",source:"Legumi"},
+  {name:"Falafel",source:"Legumi"},
+  {name:"Pollo alle mandorle",source:"Carne Bianca"},
+  {name:"Cosce di pollo al vino",source:"Carne Bianca"},
+  {name:"Pollo speziato all'arancia",source:"Carne Bianca"},
+  {name:"Pollo marinato",source:"Carne Bianca"},
+  {name:"Pollo alla griglia",source:"Carne Bianca"},
+  {name:"Pollo al curry",source:"Carne Bianca"},
+  {name:"Filetto alla griglia",source:"Carne Rossa"},
+  {name:"Polpette al sugo",source:"Carne Rossa"},
+  {name:"Hamburger",source:"Carne Rossa"},
+  {name:"Insalata di farro con feta",source:"Latticini"},
+  {name:"Polpettone veg e ricotta",source:"Latticini"},
+  {name:"Pasta al pomodoro con parmigiano/grana",source:"Latticini"},
+  {name:"Insalata melone e feta",source:"Latticini"},
+  {name:"Frittata asparagi",source:"Uova"},
+  {name:"Frittata porro e zucchine",source:"Uova"},
+  {name:"Uova (generico)",source:"Uova"},
+  {name:"Fattoush con crostini di pane",source:"Insalate"},
+  {name:"Insalata di finocchio",source:"Insalate"},
+  {name:"Insalata pomodoro e cipolla",source:"Insalate"},
+  {name:"Piadina con affettati",source:"Affettati Magri"},
+  {name:"Pizza",source:"Stella"},
+  {name:"Sushi",source:"Stella"},
+  {name:"Ristorante (libero)",source:"Stella"},
+  {name:"Aperitivo Eataly",source:"Stella"},
 ];
-
-const FIXED_MEALS = {
-  // dayIndex (0=Lunedì…6=Domenica) → meal → dish
-  3: { pranzo: { name: "Pollo allo spiedo", source: "Carne Bianca" } }  // Giovedì pranzo
-};
-
+const FIXED_MEALS = { 3: { pranzo: {name:"Pollo allo spiedo",source:"Carne Bianca"} } };
 const FREQUENCIES = {
-  "Pesce":           { min: 3, label: "Pesce",        color: "var(--pesce)" },
-  "Legumi":          { min: 3, label: "Legumi",        color: "var(--legumi)" },
-  "Carne Bianca":    { min: 2, label: "Carne Bianca",  color: "var(--bianca)" },
-  "Latticini":       { min: 2, label: "Latticini",     color: "var(--latticini)" },
-  "Uova":            { min: 3, label: "Uova",          color: "var(--uova)" },
-  "Carne Rossa":     { min: 1, label: "Carne Rossa",   color: "var(--rossa)" },
-  "Affettati Magri": { min: 1, label: "Affettati",     color: "var(--affettati)" },
-  "Stella":          { min: 1, label: "⭐ Stella",     color: "var(--stella)" },
+  "Pesce":           {min:3,label:"Pesce",       color:"var(--pesce)"},
+  "Legumi":          {min:3,label:"Legumi",       color:"var(--legumi)"},
+  "Carne Bianca":    {min:2,label:"Carne Bianca", color:"var(--bianca)"},
+  "Latticini":       {min:2,label:"Latticini",    color:"var(--latticini)"},
+  "Uova":            {min:3,label:"Uova",         color:"var(--uova)"},
+  "Carne Rossa":     {min:1,label:"Carne Rossa",  color:"var(--rossa)"},
+  "Affettati Magri": {min:1,label:"Affettati",    color:"var(--affettati)"},
+  "Stella":          {min:1,label:"⭐ Stella",    color:"var(--stella)"},
 };
-
 const ALL_SOURCES = ["Pesce","Legumi","Carne Bianca","Carne Rossa","Latticini","Uova","Affettati Magri","Stella","Insalate"];
 const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 const SOURCE_CLASS = {
@@ -385,764 +345,330 @@ const SOURCE_CLASS = {
   "Affettati Magri":"src-affettati","Stella":"src-stella","Insalate":"src-insalate",
 };
 
+/* ── STATE ─────────────────────────────────────────── */
 let currentPlan = null;
 let swapTarget = null;
 let swapSelected = null;
 let aiSuggestedDish = null;
-let activeSourceFilter = null; // null = same source as current
+let activeSourceFilter = null;
 
-// ─── HELPERS ───────────────────────────────────────────────
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+const urlParams = new URLSearchParams(window.location.search);
+const weekKeyParam = urlParams.get('week');
+const weekLabelParam = urlParams.get('label');
+
+/* ── FIREBASE SAVE / LOAD ──────────────────────────── */
+function showSaveStatus(msg) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg; el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 2500);
+}
+
+async function savePlan() {
+  if (!currentPlan || !weekKeyParam) return;
+  try {
+    await setDoc(doc(db, 'piani', weekKeyParam), { plan: currentPlan, savedAt: new Date().toISOString() });
+    showSaveStatus('✓ Salvato su Firebase');
+  } catch(e) {
+    showSaveStatus('⚠ Errore salvataggio');
+    console.error(e);
   }
-  return a;
 }
 
-function getWeekLabel() {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diff));
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const fmt = d => d.toLocaleDateString('it-IT', { day: '2-digit', month: 'long' });
-  return `${fmt(monday)} – ${fmt(sunday)}`;
+async function loadSavedPlan() {
+  if (!weekKeyParam) return null;
+  try {
+    const snap = await getDoc(doc(db, 'piani', weekKeyParam));
+    return snap.exists() ? snap.data().plan : null;
+  } catch(e) { console.error(e); return null; }
 }
 
-function getSourceColor(src) {
-  const map = {
-    "Pesce":"var(--pesce)","Legumi":"var(--legumi)","Carne Bianca":"var(--bianca)",
-    "Carne Rossa":"var(--rossa)","Latticini":"var(--latticini)","Uova":"var(--uova)",
-    "Affettati Magri":"var(--affettati)","Stella":"var(--stella)","Insalate":"#aaa",
-  };
-  return map[src] || '#999';
+/* ── HELPERS ───────────────────────────────────────── */
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function getSourceColor(src){const m={"Pesce":"var(--pesce)","Legumi":"var(--legumi)","Carne Bianca":"var(--bianca)","Carne Rossa":"var(--rossa)","Latticini":"var(--latticini)","Uova":"var(--uova)","Affettati Magri":"var(--affettati)","Stella":"var(--stella)","Insalate":"#aaa"};return m[src]||'#999';}
+function getWeekLabel(){const now=new Date();const day=now.getDay();const diff=now.getDate()-day+(day===0?-6:1);const mon=new Date(now.setDate(diff));const sun=new Date(mon);sun.setDate(mon.getDate()+6);const fmt=d=>d.toLocaleDateString('it-IT',{day:'2-digit',month:'long'});return`${fmt(mon)} – ${fmt(sun)}`;}
+
+/* ── BUILD PLAN ────────────────────────────────────── */
+function buildPlan(){
+  const fixedSources={};
+  const fixedCount=Object.values(FIXED_MEALS).reduce((n,meals)=>{for(const dish of Object.values(meals)){fixedSources[dish.source]=(fixedSources[dish.source]||0)+1;}return n+Object.keys(meals).length;},0);
+  const freeSlots=14-fixedCount;
+  const HARD_MIN={'Pesce':3,'Legumi':3,'Stella':1,'Carne Rossa':1,'Affettati Magri':1,'Carne Bianca':2};
+  const pool=[];
+  for(const[src,hm]of Object.entries(HARD_MIN)){const already=fixedSources[src]||0;const need=Math.max(0,hm-already);for(let i=0;i<need;i++)pool.push(src);}
+  for(const src of['Uova','Latticini','Uova','Latticini']){if(pool.length>=freeSlots)break;pool.push(src);}
+  while(pool.length>freeSlots)pool.pop();
+  const sources=shuffle(pool);
+  const slots=Array.from({length:7},()=>[null,null]);
+  for(const[di,meals]of Object.entries(FIXED_MEALS)){const d=parseInt(di);if(meals.pranzo)slots[d][0]='__FIXED__';if(meals.cena)slots[d][1]='__FIXED__';}
+  function getFree(){const f=[];for(let d=0;d<7;d++)for(let m=0;m<2;m++)if(slots[d][m]===null)f.push([d,m]);return shuffle(f);}
+  for(const src of sources){const free=getFree();const pref=free.filter(([d,m])=>{const o=slots[d][m===0?1:0];return o===null||o==='__FIXED__'||o!==src;});const ch=pref.length?pref[0]:free[0];if(ch)slots[ch[0]][ch[1]]=src;}
+  for(let d=0;d<7;d++)for(let m=0;m<2;m++){if(slots[d][m]===null){const o=slots[d][m===0?1:0];slots[d][m]=shuffle(['Insalate','Uova','Latticini']).find(f=>f!==o)||'Insalate';}}
+  const used=new Set();
+  for(const meals of Object.values(FIXED_MEALS))for(const dish of Object.values(meals))used.add(dish.name);
+  function pickDish(src){const c=DISHES.filter(d=>d.source===src&&!used.has(d.name));const p=c.length?c:DISHES.filter(d=>d.source===src);const pick=p[Math.floor(Math.random()*p.length)]||{name:src,source:src};used.add(pick.name);return pick;}
+  return slots.map((day,i)=>{const fx=FIXED_MEALS[i]||{};return{day:DAYS[i],pranzo:fx.pranzo?{...fx.pranzo}:pickDish(day[0]),cena:fx.cena?{...fx.cena}:pickDish(day[1])};});
 }
 
-// ─── PLAN GENERATION ───────────────────────────────────────
-function generatePlan() {
+/* ── GENERATE ──────────────────────────────────────── */
+window.generatePlan = async function() {
   document.getElementById('loadingOverlay').classList.add('active');
   document.getElementById('loadingText').textContent = 'Generando il piano...';
-  setTimeout(() => {
-    currentPlan = buildPlan();
-    renderPlan(currentPlan);
-    document.getElementById('loadingOverlay').classList.remove('active');
-    document.getElementById('btnEmail').disabled = false;
-    document.getElementById('btnShop').disabled = false;
-    document.getElementById('weekInfo').textContent = 'Settimana del ' + getWeekLabel();
-  }, 500);
-}
+  await new Promise(r => setTimeout(r, 400));
+  currentPlan = buildPlan();
+  renderPlan(currentPlan);
+  document.getElementById('loadingOverlay').classList.remove('active');
+  document.getElementById('btnEmail').disabled = false;
+  document.getElementById('btnShop').disabled = false;
+  document.getElementById('weekInfo').textContent = 'Settimana del ' + (weekLabelParam || getWeekLabel());
+  await savePlan();
+};
 
-function buildPlan() {
-  // ── 1. Calcola i fissi ───────────────────────────────────
-  const fixedSources = {};
-  const fixedCount = Object.values(FIXED_MEALS).reduce((n, meals) => {
-    for (const dish of Object.values(meals)) {
-      fixedSources[dish.source] = (fixedSources[dish.source] || 0) + 1;
-    }
-    return n + Object.keys(meals).length;
-  }, 0);
-
-  const freeSlots = 14 - fixedCount; // 13 con il pollo allo spiedo fisso
-
-  // ── 2. Minimi garantiti (HARD) ──────────────────────────
-  // Queste fonti vengono sempre inserite al loro minimo, senza eccezioni
-  const HARD_MIN = {
-    'Pesce':           3,
-    'Legumi':          3,
-    'Stella':          1,
-    'Carne Rossa':     1,
-    'Affettati Magri': 1,
-    'Carne Bianca':    2,  // include il fixed di giovedì
-  };
-
-  // ── 3. Costruisce il pool HARD (garantiti) ───────────────
-  const pool = [];
-  for (const [src, hardMin] of Object.entries(HARD_MIN)) {
-    const already = fixedSources[src] || 0;
-    const need = Math.max(0, hardMin - already);
-    for (let i = 0; i < need; i++) pool.push(src);
-  }
-
-  // ── 4. Riempie i posti rimanenti con fonti SOFT ──────────
-  // Ordine di preferenza: Uova, Latticini (aggiunge finché ci sono posti)
-  const SOFT_ORDER = ['Uova', 'Latticini', 'Uova', 'Latticini'];
-  for (const src of SOFT_ORDER) {
-    if (pool.length >= freeSlots) break;
-    pool.push(src);
-  }
-
-  // Sicurezza: tronca se per qualche motivo supera
-  while (pool.length > freeSlots) pool.pop();
-
-  // ── 5. Piazza le fonti negli slot ────────────────────────
-  const sources = shuffle(pool);
-  const slots = Array.from({ length: 7 }, () => [null, null]);
-
-  for (const [dayIdx, meals] of Object.entries(FIXED_MEALS)) {
-    const d = parseInt(dayIdx);
-    if (meals.pranzo) slots[d][0] = '__FIXED__';
-    if (meals.cena)   slots[d][1] = '__FIXED__';
-  }
-
-  function getFreeSlotList() {
-    const free = [];
-    for (let d = 0; d < 7; d++)
-      for (let m = 0; m < 2; m++)
-        if (slots[d][m] === null) free.push([d, m]);
-    return shuffle(free);
-  }
-
-  for (const src of sources) {
-    const free = getFreeSlotList();
-    const preferred = free.filter(([d, m]) => {
-      const other = slots[d][m === 0 ? 1 : 0];
-      return other === null || other === '__FIXED__' || other !== src;
-    });
-    const chosen = preferred.length ? preferred[0] : free[0];
-    if (chosen) slots[chosen[0]][chosen[1]] = src;
-  }
-
-  // ── 6. Riempie eventuali null residui con fillers neutri ─
-  for (let d = 0; d < 7; d++) {
-    for (let m = 0; m < 2; m++) {
-      if (slots[d][m] === null) {
-        const otherSrc = slots[d][m === 0 ? 1 : 0];
-        const fillers = shuffle(['Insalate', 'Uova', 'Latticini']);
-        slots[d][m] = fillers.find(f => f !== otherSrc) || 'Insalate';
-      }
-    }
-  }
-
-  const used = new Set();
-  // Mark fixed dishes as used
-  for (const meals of Object.values(FIXED_MEALS)) {
-    for (const dish of Object.values(meals)) used.add(dish.name);
-  }
-
-  function pickDish(src) {
-    const cands = DISHES.filter(d => d.source === src && !used.has(d.name));
-    const pool = cands.length ? cands : DISHES.filter(d => d.source === src);
-    const pick = pool[Math.floor(Math.random() * pool.length)] || { name: src, source: src };
-    used.add(pick.name);
-    return pick;
-  }
-
-  return slots.map((day, i) => {
-    const fixed = FIXED_MEALS[i] || {};
-    const pranzo = fixed.pranzo ? { ...fixed.pranzo } : pickDish(day[0]);
-    const cena   = fixed.cena   ? { ...fixed.cena }   : pickDish(day[1]);
-    return { day: DAYS[i], pranzo, cena };
-  });
-}
-
-// ─── RENDER ────────────────────────────────────────────────
-function renderPlan(plan) {
-  const grid = document.getElementById('planGrid');
-  grid.innerHTML = '';
+/* ── RENDER ────────────────────────────────────────── */
+function renderPlan(plan){
+  const grid=document.getElementById('planGrid');grid.innerHTML='';
   refreshFreqBar(plan);
-  plan.forEach((dayPlan, dayIdx) => {
-    const col = document.createElement('div');
-    col.className = 'day-col';
-    col.innerHTML = `
+  plan.forEach((dayPlan,dayIdx)=>{
+    const col=document.createElement('div');col.className='day-col';
+    col.innerHTML=`
       <div class="day-header">${dayPlan.day}</div>
       <div class="meal-slot">
-        <div class="meal-label">
-          <span>☀ Pranzo</span>
+        <div class="meal-label"><span>☀ Pranzo</span>
           <div class="meal-actions">
             <button class="swap-btn" onclick="openSwapModal(${dayIdx},'pranzo')">✏ Cambia</button>
-            <button class="swap-btn ai" onclick="openAiModal(${dayIdx},'pranzo')">✨ Suggerisci</button>
+            <button class="swap-btn ai" onclick="openAiModal(${dayIdx},'pranzo')">✨ AI</button>
           </div>
         </div>
-        ${mealCardHTML(dayPlan.pranzo, dayIdx, 'pranzo')}
+        ${mealCardHTML(dayPlan.pranzo,dayIdx,'pranzo')}
       </div>
       <div class="meal-slot">
-        <div class="meal-label">
-          <span>🌙 Cena</span>
+        <div class="meal-label"><span>🌙 Cena</span>
           <div class="meal-actions">
             <button class="swap-btn" onclick="openSwapModal(${dayIdx},'cena')">✏ Cambia</button>
-            <button class="swap-btn ai" onclick="openAiModal(${dayIdx},'cena')">✨ Suggerisci</button>
+            <button class="swap-btn ai" onclick="openAiModal(${dayIdx},'cena')">✨ AI</button>
           </div>
         </div>
-        ${mealCardHTML(dayPlan.cena, dayIdx, 'cena')}
-      </div>
-    `;
+        ${mealCardHTML(dayPlan.cena,dayIdx,'cena')}
+      </div>`;
     grid.appendChild(col);
   });
 }
 
-function mealCardHTML(dish, dayIdx, meal) {
-  const cls = SOURCE_CLASS[dish.source] || 'src-insalate';
-  return `<div class="meal-card ${cls}" id="card-${dayIdx}-${meal}">
-    <div class="meal-name">${dish.name}</div>
-    <div class="meal-source">${dish.source}</div>
-  </div>`;
+function mealCardHTML(dish,di,meal){
+  const cls=SOURCE_CLASS[dish.source]||'src-insalate';
+  return`<div class="meal-card ${cls}" id="card-${di}-${meal}"><div class="meal-name">${dish.name}</div><div class="meal-source">${dish.source}</div></div>`;
 }
 
-function refreshFreqBar(plan) {
-  const counts = {};
-  plan.forEach(d => [d.pranzo.source, d.cena.source].forEach(s => { counts[s] = (counts[s]||0)+1; }));
-  const bar = document.getElementById('freqBar');
-  bar.innerHTML = '';
-  for (const [src, conf] of Object.entries(FREQUENCIES)) {
-    const b = document.createElement('div');
-    b.className = 'freq-badge';
-    b.style.background = conf.color;
-    b.innerHTML = `<span>${conf.label}</span> <span class="count">${counts[src]||0}x</span>`;
-    bar.appendChild(b);
-  }
+function refreshFreqBar(plan){
+  const counts={};
+  plan.forEach(d=>[d.pranzo.source,d.cena.source].forEach(s=>{counts[s]=(counts[s]||0)+1;}));
+  const bar=document.getElementById('freqBar');bar.innerHTML='';
+  for(const[src,conf]of Object.entries(FREQUENCIES)){const b=document.createElement('div');b.className='freq-badge';b.style.background=conf.color;b.innerHTML=`<span>${conf.label}</span><span class="count">${counts[src]||0}x</span>`;bar.appendChild(b);}
 }
 
-function applyDishToCard(dayIdx, meal, dish, oldSource) {
-  // If source changed: remove one other meal of the OLD source from the week
-  if (oldSource && dish.source !== oldSource) {
-    removeOneOfSource(dayIdx, meal, oldSource);
+function applyDishToCard(di,meal,dish,oldSource){
+  if(oldSource&&dish.source!==oldSource){
+    for(let d=0;d<7;d++){for(const m of['pranzo','cena']){if(d===di&&m===meal)continue;if(currentPlan[d][m].source===oldSource){const filler=DISHES.filter(x=>x.source==='Insalate');const pick=filler[Math.floor(Math.random()*filler.length)]||{name:'Insalata mista',source:'Insalate'};currentPlan[d][m]=pick;const card=document.getElementById(`card-${d}-${m}`);if(card){card.className='meal-card src-insalate just-changed';card.innerHTML=`<div class="meal-name">${pick.name}</div><div class="meal-source">${pick.source}</div>`;}break;}}}
   }
-  currentPlan[dayIdx][meal] = dish;
-  const card = document.getElementById(`card-${dayIdx}-${meal}`);
-  if (card) {
-    const cls = SOURCE_CLASS[dish.source] || 'src-insalate';
-    card.className = `meal-card ${cls} just-changed`;
-    card.innerHTML = `<div class="meal-name">${dish.name}</div><div class="meal-source">${dish.source}</div>`;
-  }
+  currentPlan[di][meal]=dish;
+  const card=document.getElementById(`card-${di}-${meal}`);
+  if(card){const cls=SOURCE_CLASS[dish.source]||'src-insalate';card.className=`meal-card ${cls} just-changed`;card.innerHTML=`<div class="meal-name">${dish.name}</div><div class="meal-source">${dish.source}</div>`;}
   refreshFreqBar(currentPlan);
 }
 
-// When user switches to a different protein source, replace another meal of the old source
-// with an Insalate placeholder to keep the plan coherent
-function removeOneOfSource(skipDay, skipMeal, oldSource) {
-  for (let d = 0; d < 7; d++) {
-    for (const m of ['pranzo','cena']) {
-      if (d === skipDay && m === skipMeal) continue;
-      if (currentPlan[d][m].source === oldSource) {
-        // Replace with a light filler
-        const filler = DISHES.filter(x => x.source === 'Insalate');
-        const pick = filler[Math.floor(Math.random() * filler.length)] || { name: 'Insalata mista', source: 'Insalate' };
-        currentPlan[d][m] = pick;
-        const idx = DAYS.indexOf(currentPlan[d].day);
-        const card = document.getElementById(`card-${d}-${m}`);
-        if (card) {
-          card.className = 'meal-card src-insalate just-changed';
-          card.innerHTML = `<div class="meal-name">${pick.name}</div><div class="meal-source">${pick.source}</div>`;
-        }
-        return; // only remove one
-      }
-    }
-  }
+function swapContextHTML(di,meal){
+  const cur=currentPlan[di][meal];
+  return`<span class="src-tag" style="color:${getSourceColor(cur.source)}">${cur.source}</span><strong>${cur.name}</strong><span style="color:var(--muted);font-size:0.72rem">${DAYS[di]} – ${meal==='pranzo'?'☀ Pranzo':'🌙 Cena'}</span>`;
 }
 
-function swapContextHTML(dayIdx, meal) {
-  const current = currentPlan[dayIdx][meal];
-  return `
-    <span class="src-tag" style="color:${getSourceColor(current.source)}">${current.source}</span>
-    <strong>${current.name}</strong>
-    <span style="color:var(--muted);font-size:0.75rem">${DAYS[dayIdx]} – ${meal === 'pranzo' ? '☀ Pranzo' : '🌙 Cena'}</span>
-  `;
-}
-
-// ─── MANUAL SWAP ───────────────────────────────────────────
-function openSwapModal(dayIdx, meal) {
-  if (!currentPlan) return;
-  swapTarget = { dayIdx, meal };
-  swapSelected = null;
-  activeSourceFilter = currentPlan[dayIdx][meal].source;
-
-  document.getElementById('swapContext').innerHTML = swapContextHTML(dayIdx, meal);
-  document.getElementById('customDishName').value = '';
-  document.getElementById('customWarning').style.display = 'none';
-  document.getElementById('confirmSwapBtn').disabled = true;
-
-  // Set default source in custom select to current
-  document.getElementById('customDishSource').value = currentPlan[dayIdx][meal].source;
-
-  renderSourceTabs(dayIdx, meal);
-  renderAlternativesList(dayIdx, meal, activeSourceFilter);
+/* ── MANUAL SWAP ───────────────────────────────────── */
+window.openSwapModal = function(di,meal){
+  if(!currentPlan)return;
+  swapTarget={dayIdx:di,meal};swapSelected=null;activeSourceFilter=currentPlan[di][meal].source;
+  document.getElementById('swapContext').innerHTML=swapContextHTML(di,meal);
+  document.getElementById('customDishName').value='';
+  document.getElementById('customWarning').style.display='none';
+  document.getElementById('confirmSwapBtn').disabled=true;
+  document.getElementById('customDishSource').value=currentPlan[di][meal].source;
+  renderSourceTabs(di,meal);renderAlternativesList(di,meal,activeSourceFilter);
   document.getElementById('swapModal').classList.add('active');
-}
+};
 
-function renderSourceTabs(dayIdx, meal) {
-  const current = currentPlan[dayIdx][meal];
-  const container = document.getElementById('sourceTabs');
-  container.innerHTML = '';
-
-  // All sources that have at least one dish different from current
-  const sourcesWithDishes = ALL_SOURCES.filter(src => {
-    if (src === current.source) return DISHES.some(d => d.source === src && d.name !== current.name);
-    return DISHES.some(d => d.source === src);
-  });
-
-  sourcesWithDishes.forEach(src => {
-    const tab = document.createElement('button');
-    tab.className = 'source-tab' + (src === activeSourceFilter ? ' active' : '');
-    if (src === activeSourceFilter) tab.style.background = getSourceColor(src);
-    tab.textContent = src === current.source ? `${src} (attuale)` : src;
-    tab.onclick = () => {
-      activeSourceFilter = src;
-      renderSourceTabs(dayIdx, meal);
-      renderAlternativesList(dayIdx, meal, src);
-      swapSelected = null;
-      document.getElementById('confirmSwapBtn').disabled = true;
-      document.getElementById('customDishSource').value = src;
-    };
+function renderSourceTabs(di,meal){
+  const cur=currentPlan[di][meal];
+  const container=document.getElementById('sourceTabs');container.innerHTML='';
+  ALL_SOURCES.filter(src=>{
+    if(src===cur.source)return DISHES.some(d=>d.source===src&&d.name!==cur.name);
+    return DISHES.some(d=>d.source===src);
+  }).forEach(src=>{
+    const tab=document.createElement('button');tab.className='source-tab'+(src===activeSourceFilter?' active':'');
+    if(src===activeSourceFilter)tab.style.background=getSourceColor(src);
+    tab.textContent=src===cur.source?`${src} (attuale)`:src;
+    tab.onclick=()=>{activeSourceFilter=src;renderSourceTabs(di,meal);renderAlternativesList(di,meal,src);swapSelected=null;document.getElementById('confirmSwapBtn').disabled=true;document.getElementById('customDishSource').value=src;};
     container.appendChild(tab);
   });
 }
 
-function renderAlternativesList(dayIdx, meal, sourceFilter) {
-  const current = currentPlan[dayIdx][meal];
-  const listEl = document.getElementById('alternativesList');
-  listEl.innerHTML = '';
-
-  const alternatives = DISHES.filter(d =>
-    d.source === sourceFilter && d.name !== current.name
-  );
-
-  if (!alternatives.length) {
-    listEl.innerHTML = '<p class="no-alts">Nessuna alternativa disponibile per questa fonte.</p>';
-    return;
-  }
-
-  alternatives.forEach(dish => {
-    const item = document.createElement('div');
-    item.className = 'alt-item';
-    item.innerHTML = `
-      <div>
-        <div class="alt-item-name">${dish.name}</div>
-        <div class="alt-item-src" style="color:${getSourceColor(dish.source)}">${dish.source}</div>
-      </div>
-      <span class="check-icon">✓</span>`;
-    item.onclick = () => {
-      document.querySelectorAll('.alt-item').forEach(i => i.classList.remove('selected'));
-      item.classList.add('selected');
-      swapSelected = dish;
-      document.getElementById('confirmSwapBtn').disabled = false;
-      document.getElementById('customDishName').value = '';
-      document.getElementById('customWarning').style.display = 'none';
-    };
+function renderAlternativesList(di,meal,srcFilter){
+  const cur=currentPlan[di][meal];
+  const listEl=document.getElementById('alternativesList');listEl.innerHTML='';
+  const alts=DISHES.filter(d=>d.source===srcFilter&&d.name!==cur.name);
+  if(!alts.length){listEl.innerHTML='<p class="no-alts">Nessuna alternativa disponibile.</p>';return;}
+  alts.forEach(dish=>{
+    const item=document.createElement('div');item.className='alt-item';
+    item.innerHTML=`<div><div class="alt-item-name">${dish.name}</div><div class="alt-item-src" style="color:${getSourceColor(dish.source)}">${dish.source}</div></div><span class="check-icon">✓</span>`;
+    item.onclick=()=>{document.querySelectorAll('.alt-item').forEach(i=>i.classList.remove('selected'));item.classList.add('selected');swapSelected=dish;document.getElementById('confirmSwapBtn').disabled=false;document.getElementById('customDishName').value='';document.getElementById('customWarning').style.display='none';};
     listEl.appendChild(item);
   });
 }
 
-function selectCustomDish() {
-  const name = document.getElementById('customDishName').value.trim();
-  const source = document.getElementById('customDishSource').value;
-  const warnEl = document.getElementById('customWarning');
+window.selectCustomDish = function(){
+  const name=document.getElementById('customDishName').value.trim();
+  const source=document.getElementById('customDishSource').value;
+  const warnEl=document.getElementById('customWarning');
+  if(!name){warnEl.textContent='Inserisci il nome del piatto.';warnEl.style.display='block';return;}
+  const curSrc=currentPlan[swapTarget.dayIdx][swapTarget.meal].source;
+  if(source!==curSrc){warnEl.textContent=`⚠ Fonte cambia da "${curSrc}" a "${source}": un altro pasto "${curSrc}" verrà sostituito con un'insalata.`;warnEl.style.display='block';}
+  else{warnEl.style.display='none';}
+  swapSelected={name,source};
+  document.querySelectorAll('.alt-item').forEach(i=>i.classList.remove('selected'));
+  document.getElementById('confirmSwapBtn').disabled=false;
+};
 
-  if (!name) {
-    warnEl.textContent = 'Inserisci il nome del piatto.';
-    warnEl.style.display = 'block';
-    return;
-  }
-
-  const currentSource = currentPlan[swapTarget.dayIdx][swapTarget.meal].source;
-  if (source !== currentSource) {
-    warnEl.textContent = `⚠ Stai cambiando fonte proteica da "${currentSource}" a "${source}": un altro pasto "${currentSource}" della settimana verrà sostituito con un'insalata.`;
-    warnEl.style.display = 'block';
-  } else {
-    warnEl.style.display = 'none';
-  }
-
-  swapSelected = { name, source };
-  // Deselect list items
-  document.querySelectorAll('.alt-item').forEach(i => i.classList.remove('selected'));
-  document.getElementById('confirmSwapBtn').disabled = false;
-}
-
-function confirmSwap() {
-  if (!swapSelected || !swapTarget) return;
-  const oldSource = currentPlan[swapTarget.dayIdx][swapTarget.meal].source;
-  applyDishToCard(swapTarget.dayIdx, swapTarget.meal, swapSelected, oldSource);
+window.confirmSwap = async function(){
+  if(!swapSelected||!swapTarget)return;
+  const oldSource=currentPlan[swapTarget.dayIdx][swapTarget.meal].source;
+  applyDishToCard(swapTarget.dayIdx,swapTarget.meal,swapSelected,oldSource);
   closeSwapModal();
-}
+  await savePlan();
+};
+window.closeSwapModal = function(){document.getElementById('swapModal').classList.remove('active');swapTarget=swapSelected=null;};
 
-function closeSwapModal() {
-  document.getElementById('swapModal').classList.remove('active');
-  swapTarget = swapSelected = null;
-}
-
-// ─── AI SUGGEST ────────────────────────────────────────────
-function openAiModal(dayIdx, meal) {
-  if (!currentPlan) return;
-  swapTarget = { dayIdx, meal };
-  aiSuggestedDish = null;
-
-  document.getElementById('aiContext').innerHTML = swapContextHTML(dayIdx, meal);
-  document.getElementById('aiLoading').style.display = 'flex';
-  document.getElementById('aiResult').style.display = 'none';
-  document.getElementById('confirmAiBtn').disabled = true;
+/* ── AI SUGGEST ────────────────────────────────────── */
+window.openAiModal = async function(di,meal){
+  if(!currentPlan)return;
+  swapTarget={dayIdx:di,meal};aiSuggestedDish=null;
+  document.getElementById('aiContext').innerHTML=swapContextHTML(di,meal);
+  document.getElementById('aiLoading').style.display='flex';
+  document.getElementById('aiResult').style.display='none';
+  document.getElementById('confirmAiBtn').disabled=true;
   document.getElementById('aiModal').classList.add('active');
+  await callClaudeForSuggestion(di,meal);
+};
 
-  callClaudeForSuggestion(dayIdx, meal);
-}
-
-async function callClaudeForSuggestion(dayIdx, meal) {
-  const current = currentPlan[dayIdx][meal];
-  const otherMeal = meal === 'pranzo' ? 'cena' : 'pranzo';
-  const otherDish = currentPlan[dayIdx][otherMeal];
-
-  const weekContext = currentPlan.map(d =>
-    `${d.day}: Pranzo = ${d.pranzo.name} (${d.pranzo.source}), Cena = ${d.cena.name} (${d.cena.source})`
-  ).join('\n');
-
-  // Only suggest from SAME source — and exclude dishes already in the week
-  const weekDishNames = new Set(currentPlan.flatMap(d => [d.pranzo.name, d.cena.name]));
-  const availableAlts = DISHES
-    .filter(d => d.source === current.source && d.name !== current.name && !weekDishNames.has(d.name))
-    .map(d => d.name);
-
-  // Fallback: include dishes already in week if nothing else available
-  const availableFallback = DISHES
-    .filter(d => d.source === current.source && d.name !== current.name)
-    .map(d => d.name);
-
-  const pool = availableAlts.length ? availableAlts : availableFallback;
-
-  const prompt = `Sei un nutrizionista. L'utente vuole sostituire un pasto del suo piano settimanale.
-
-PIANO ATTUALE DELLA SETTIMANA:
-${weekContext}
-
-PASTO DA SOSTITUIRE:
-Giorno: ${DAYS[dayIdx]}
-Momento: ${meal === 'pranzo' ? 'Pranzo' : 'Cena'}
-Piatto attuale: ${current.name} (fonte proteica: ${current.source})
-Altro pasto dello stesso giorno: ${otherDish.name} (${otherDish.source})
-
-PIATTI DISPONIBILI CON LA STESSA FONTE PROTEICA (${current.source}):
-${pool.length ? pool.join(', ') : 'nessuno oltre quello attuale'}
-
-Suggerisci IL MIGLIORE piatto alternativo dalla lista sopra. Considera varietà rispetto alla settimana e complementarità col resto del giorno.
-
-Rispondi SOLO con un oggetto JSON (niente testo extra, niente backtick):
-{"piatto":"nome esatto dalla lista","motivo":"spiegazione breve in italiano (max 2 frasi)"}
-
-Se non ci sono alternative usa: {"piatto":null,"motivo":"Nessuna alternativa disponibile."}`;
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 300,
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content?.map(b => b.text || '').join('') || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-
-    document.getElementById('aiLoading').style.display = 'none';
-
-    if (!parsed.piatto) {
-      document.getElementById('aiResult').style.display = 'block';
-      document.getElementById('aiResult').innerHTML = `<p style="color:var(--muted);font-size:0.85rem;font-style:italic">Nessuna alternativa disponibile per questa fonte proteica.</p>`;
-      return;
-    }
-
-    const found = DISHES.find(d => d.name === parsed.piatto && d.source === current.source);
-    aiSuggestedDish = found || { name: parsed.piatto, source: current.source };
-
-    const srcCls = SOURCE_CLASS[current.source] || 'src-insalate';
-    document.getElementById('aiResult').style.display = 'block';
-    document.getElementById('aiResult').innerHTML = `
-      <div class="ai-label">✨ Suggerimento Claude</div>
-      <div class="ai-suggest-dish">${aiSuggestedDish.name}</div>
-      <div class="ai-suggest-source ${srcCls}">${current.source}</div>
-      <div class="ai-suggest-reason">${parsed.motivo}</div>
-      <button class="ai-retry-btn" onclick="retryAiSuggest()">🔄 Altro suggerimento</button>
-    `;
-    document.getElementById('confirmAiBtn').disabled = false;
-
-  } catch (err) {
-    document.getElementById('aiLoading').style.display = 'none';
-    document.getElementById('aiResult').style.display = 'block';
-    document.getElementById('aiResult').innerHTML = `
-      <p style="color:#c00;font-size:0.82rem">Errore nella connessione. Riprova.</p>
-      <button class="ai-retry-btn" style="margin-top:10px" onclick="retryAiSuggest()">🔄 Riprova</button>
-    `;
+async function callClaudeForSuggestion(di,meal){
+  const cur=currentPlan[di][meal];
+  const other=currentPlan[di][meal==='pranzo'?'cena':'pranzo'];
+  const weekCtx=currentPlan.map(d=>`${d.day}: Pranzo=${d.pranzo.name}(${d.pranzo.source}), Cena=${d.cena.name}(${d.cena.source})`).join('\n');
+  const weekNames=new Set(currentPlan.flatMap(d=>[d.pranzo.name,d.cena.name]));
+  const avail=DISHES.filter(d=>d.source===cur.source&&d.name!==cur.name&&!weekNames.has(d.name)).map(d=>d.name);
+  const fallback=DISHES.filter(d=>d.source===cur.source&&d.name!==cur.name).map(d=>d.name);
+  const pool=avail.length?avail:fallback;
+  const prompt=`Sei un nutrizionista. Piano settimana:\n${weekCtx}\n\nPasto da sostituire: ${DAYS[di]} ${meal==='pranzo'?'Pranzo':'Cena'}\nPiatto attuale: ${cur.name} (${cur.source})\nAltro pasto del giorno: ${other.name} (${other.source})\n\nAlternative disponibili (${cur.source}): ${pool.join(', ')||'nessuna'}\n\nRispondi SOLO con JSON (no backtick):\n{"piatto":"nome esatto dalla lista","motivo":"spiegazione breve (max 2 frasi)"}\nSe nessuna alternativa: {"piatto":null,"motivo":"Nessuna alternativa."}`;
+  try{
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,messages:[{role:"user",content:prompt}]})});
+    const data=await resp.json();
+    const text=data.content?.map(b=>b.text||'').join('')||'';
+    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+    document.getElementById('aiLoading').style.display='none';
+    if(!parsed.piatto){document.getElementById('aiResult').style.display='block';document.getElementById('aiResult').innerHTML=`<p style="color:var(--muted);font-size:0.82rem;font-style:italic">Nessuna alternativa disponibile.</p>`;return;}
+    aiSuggestedDish=DISHES.find(d=>d.name===parsed.piatto&&d.source===cur.source)||{name:parsed.piatto,source:cur.source};
+    const cls=SOURCE_CLASS[cur.source]||'src-insalate';
+    document.getElementById('aiResult').style.display='block';
+    document.getElementById('aiResult').innerHTML=`<div class="ai-label">✨ Suggerimento Claude</div><div class="ai-suggest-dish">${aiSuggestedDish.name}</div><div class="ai-suggest-source ${cls}">${cur.source}</div><div class="ai-suggest-reason">${parsed.motivo}</div><button class="ai-retry-btn" onclick="retryAiSuggest()">🔄 Altro</button>`;
+    document.getElementById('confirmAiBtn').disabled=false;
+  }catch(e){
+    document.getElementById('aiLoading').style.display='none';
+    document.getElementById('aiResult').style.display='block';
+    document.getElementById('aiResult').innerHTML=`<p style="color:#c00;font-size:0.82rem">Errore connessione.</p><button class="ai-retry-btn" onclick="retryAiSuggest()">🔄 Riprova</button>`;
   }
 }
 
-function retryAiSuggest() {
-  if (!swapTarget) return;
-  aiSuggestedDish = null;
-  document.getElementById('aiLoading').style.display = 'flex';
-  document.getElementById('aiResult').style.display = 'none';
-  document.getElementById('confirmAiBtn').disabled = true;
-  callClaudeForSuggestion(swapTarget.dayIdx, swapTarget.meal);
-}
+window.retryAiSuggest = async function(){if(!swapTarget)return;aiSuggestedDish=null;document.getElementById('aiLoading').style.display='flex';document.getElementById('aiResult').style.display='none';document.getElementById('confirmAiBtn').disabled=true;await callClaudeForSuggestion(swapTarget.dayIdx,swapTarget.meal);};
+window.confirmAiSwap = async function(){if(!aiSuggestedDish||!swapTarget)return;applyDishToCard(swapTarget.dayIdx,swapTarget.meal,aiSuggestedDish,null);closeAiModal();await savePlan();};
+window.closeAiModal = function(){document.getElementById('aiModal').classList.remove('active');swapTarget=null;aiSuggestedDish=null;};
 
-function confirmAiSwap() {
-  if (!aiSuggestedDish || !swapTarget) return;
-  applyDishToCard(swapTarget.dayIdx, swapTarget.meal, aiSuggestedDish, null);
-  closeAiModal();
-}
-
-function closeAiModal() {
-  document.getElementById('aiModal').classList.remove('active');
-  swapTarget = null;
-  aiSuggestedDish = null;
-}
-
-// ─── SHOPPING LIST ─────────────────────────────────────────
-function openShopModal() {
-  if (!currentPlan) return;
-  document.getElementById('shopLoading').style.display = 'flex';
-  document.getElementById('shopContent').style.display = 'none';
-  document.getElementById('shopPrintBtn').style.display = 'none';
+/* ── SHOPPING LIST ─────────────────────────────────── */
+window.openShopModal = function(){
+  if(!currentPlan)return;
+  document.getElementById('shopLoading').style.display='flex';
+  document.getElementById('shopContent').style.display='none';
+  document.getElementById('shopPrintBtn').style.display='none';
   document.getElementById('shopModal').classList.add('active');
   callClaudeForShoppingList();
-}
+};
 
-async function callClaudeForShoppingList() {
-  const mealsList = currentPlan.map(d =>
-    `- ${d.day}: Pranzo = ${d.pranzo.name}, Cena = ${d.cena.name}`
-  ).join('\n');
-
-  const prompt = `Sei un nutrizionista esperto. Genera la lista della spesa per 2 persone per una settimana, basandoti su questi pasti:
-
-${mealsList}
-
-Per ogni ingrediente indica:
-- Quantità per 2 persone (es. "400g", "1 confezione", "4 pezzi")
-- Categoria del supermercato
-
-Raggruppa per categoria. Le categorie da usare sono: Carne & Pesce, Verdure & Frutta, Latticini & Uova, Dispensa (pasta/riso/legumi secchi/conserve), Pane & Cereali, Altro.
-
-Escludi condimenti base (olio, sale, pepe) a meno che non siano quantità rilevanti.
-
-Rispondi SOLO con un oggetto JSON (niente testo extra, niente backtick markdown):
-{
-  "categorie": [
-    {
-      "nome": "Carne & Pesce",
-      "emoji": "🥩",
-      "color": "#c8522a",
-      "items": [
-        {"quantita": "400g", "nome": "Filetto di branzino", "nota": "fresco o surgelato"}
-      ]
-    }
-  ]
-}`;
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }]
-      })
+async function callClaudeForShoppingList(){
+  const meals=currentPlan.map(d=>`- ${d.day}: Pranzo=${d.pranzo.name}, Cena=${d.cena.name}`).join('\n');
+  const prompt=`Sei un nutrizionista. Genera lista della spesa per 2 persone per questi pasti:\n${meals}\n\nPer ogni ingrediente: quantità per 2 persone e categoria.\nCategorie: Carne & Pesce, Verdure & Frutta, Latticini & Uova, Dispensa, Pane & Cereali, Altro.\nEscludi condimenti base.\nRispondi SOLO con JSON (no backtick):\n{"categorie":[{"nome":"Carne & Pesce","emoji":"🥩","color":"#c8522a","items":[{"quantita":"400g","nome":"...","nota":"..."}]}]}`;
+  try{
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]})});
+    const data=await resp.json();
+    const text=data.content?.map(b=>b.text||'').join('')||'';
+    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+    document.getElementById('shopLoading').style.display='none';
+    const container=document.getElementById('shopContent');container.innerHTML='';
+    (parsed.categorie||[]).forEach(cat=>{
+      if(!cat.items?.length)return;
+      const sec=document.createElement('div');sec.className='shop-category';
+      const title=document.createElement('div');title.className='shop-category-title';title.style.borderColor=cat.color||'#999';title.style.color=cat.color||'#333';title.textContent=`${cat.emoji||''} ${cat.nome}`;sec.appendChild(title);
+      cat.items.forEach(item=>{const row=document.createElement('div');row.className='shop-item';row.innerHTML=`<span class="shop-qty">${item.quantita}</span><span class="shop-item-name">${item.nome}</span>${item.nota?`<span class="shop-item-note">${item.nota}</span>`:''}`;sec.appendChild(row);});
+      container.appendChild(sec);
     });
-
-    const data = await response.json();
-    const text = data.content?.map(b => b.text || '').join('') || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-
-    document.getElementById('shopLoading').style.display = 'none';
-    renderShoppingList(parsed);
-    document.getElementById('shopContent').style.display = 'block';
-    document.getElementById('shopPrintBtn').style.display = 'inline-block';
-
-  } catch (err) {
-    document.getElementById('shopLoading').style.display = 'none';
-    document.getElementById('shopContent').style.display = 'block';
-    document.getElementById('shopContent').innerHTML = `<p style="color:#c00;font-size:0.9rem">Errore nel generare la lista. <button class="ai-retry-btn" onclick="callClaudeForShoppingList()">Riprova</button></p>`;
+    document.getElementById('shopContent').style.display='block';
+    document.getElementById('shopPrintBtn').style.display='inline-block';
+  }catch(e){
+    document.getElementById('shopLoading').style.display='none';
+    document.getElementById('shopContent').style.display='block';
+    document.getElementById('shopContent').innerHTML=`<p style="color:#c00;font-size:0.88rem">Errore. <button class="ai-retry-btn" onclick="openShopModal()">Riprova</button></p>`;
   }
 }
+window.closeShopModal = function(){document.getElementById('shopModal').classList.remove('active');};
 
-function renderShoppingList(data) {
-  const container = document.getElementById('shopContent');
-  container.innerHTML = '';
-  (data.categorie || []).forEach(cat => {
-    if (!cat.items || !cat.items.length) return;
-    const section = document.createElement('div');
-    section.className = 'shop-category';
-    const titleEl = document.createElement('div');
-    titleEl.className = 'shop-category-title';
-    titleEl.style.borderColor = cat.color || '#999';
-    titleEl.style.color = cat.color || '#333';
-    titleEl.textContent = `${cat.emoji || ''} ${cat.nome}`;
-    section.appendChild(titleEl);
-    cat.items.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'shop-item';
-      row.innerHTML = `
-        <span class="shop-qty">${item.quantita}</span>
-        <span class="shop-item-name">${item.nome}</span>
-        ${item.nota ? `<span class="shop-item-note">${item.nota}</span>` : ''}
-      `;
-      section.appendChild(row);
-    });
-    container.appendChild(section);
-  });
-}
+/* ── EMAIL ─────────────────────────────────────────── */
+window.openEmailModal = function(){document.getElementById('emailModal').classList.add('active');document.getElementById('emailError').style.display='none';document.getElementById('emailSuccess').style.display='none';};
+window.closeEmailModal = function(){document.getElementById('emailModal').classList.remove('active');};
+window.sendEmail = function(){
+  const email=document.getElementById('emailInput').value.trim();
+  const errEl=document.getElementById('emailError'),sucEl=document.getElementById('emailSuccess');
+  if(!email||!email.includes('@')){errEl.textContent='Email non valida.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  let body=`Piano Alimentare – Settimana del ${weekLabelParam||getWeekLabel()}\n\n`;
+  currentPlan?.forEach(d=>{body+=`${d.day}\n  ☀ Pranzo: ${d.pranzo.name} (${d.pranzo.source})\n  🌙 Cena:  ${d.cena.name} (${d.cena.source})\n\n`;});
+  window.location.href=`mailto:${email}?subject=${encodeURIComponent('Piano Alimentare – '+(weekLabelParam||''))}&body=${encodeURIComponent(body)}`;
+  sucEl.textContent=`✓ Si aprirà il client email per ${email}`;sucEl.style.display='block';
+  setTimeout(()=>closeEmailModal(),3000);
+};
 
-function printShoppingList() {
-  window.print();
-}
-
-function closeShopModal() {
-  document.getElementById('shopModal').classList.remove('active');
-}
-
-// ─── EMAIL ─────────────────────────────────────────────────
-function openEmailModal() {
-  document.getElementById('emailModal').classList.add('active');
-  document.getElementById('emailError').style.display = 'none';
-  document.getElementById('emailSuccess').style.display = 'none';
-}
-
-function closeEmailModal() {
-  document.getElementById('emailModal').classList.remove('active');
-}
-
-function sendEmail() {
-  const email = document.getElementById('emailInput').value.trim();
-  const errEl = document.getElementById('emailError');
-  const sucEl = document.getElementById('emailSuccess');
-  if (!email || !email.includes('@')) {
-    errEl.textContent = 'Inserisci un indirizzo email valido.';
-    errEl.style.display = 'block';
-    return;
-  }
-  errEl.style.display = 'none';
-  const week = getWeekLabel();
-  let body = `Piano Alimentare – Settimana del ${week}\n\n`;
-  currentPlan?.forEach(d => {
-    body += `${d.day}\n`;
-    body += `  ☀ Pranzo: ${d.pranzo.name} (${d.pranzo.source})\n`;
-    body += `  🌙 Cena:  ${d.cena.name} (${d.cena.source})\n\n`;
-  });
-  body += `\nGenerato automaticamente dal Piano Alimentare Settimanale.`;
-  window.location.href = `mailto:${email}?subject=${encodeURIComponent(`Piano Alimentare – ${week}`)}&body=${encodeURIComponent(body)}`;
-  sucEl.textContent = `✓ Si aprirà il tuo client email con il piano indirizzato a ${email}`;
-  sucEl.style.display = 'block';
-  setTimeout(() => closeEmailModal(), 3000);
-}
-
-// ─── MODAL BACKDROP CLOSE ──────────────────────────────────
-['emailModal','swapModal','aiModal','shopModal'].forEach(id => {
-  document.getElementById(id).addEventListener('click', e => {
-    if (e.target === document.getElementById(id)) {
-      if (id === 'emailModal') closeEmailModal();
-      if (id === 'swapModal') closeSwapModal();
-      if (id === 'aiModal') closeAiModal();
-      if (id === 'shopModal') closeShopModal();
+/* ── MODAL BACKDROP ────────────────────────────────── */
+['emailModal','swapModal','aiModal','shopModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    if(e.target===document.getElementById(id)){
+      if(id==='emailModal')closeEmailModal();
+      if(id==='swapModal')closeSwapModal();
+      if(id==='aiModal')closeAiModal();
+      if(id==='shopModal')closeShopModal();
     }
   });
 });
 
-// ─── SETTIMANA DA URL + SALVATAGGIO ────────────────────────
-const urlParams = new URLSearchParams(window.location.search);
-const weekKeyParam  = urlParams.get('week');   // "YYYY-MM-DD" del lunedì
-const weekLabelParam = urlParams.get('label'); // "3 giu – 9 giu"
-
-function storageKey() {
-  return weekKeyParam ? 'piano_' + weekKeyParam : 'piano_current';
-}
-
-function savePlan() {
-  if (!currentPlan) return;
-  try {
-    localStorage.setItem(storageKey(), JSON.stringify(currentPlan));
-    const el = document.getElementById('saveStatus');
-    el.textContent = '✓ Piano salvato';
-    el.style.opacity = '1';
-    setTimeout(() => { el.style.opacity = '0'; }, 2000);
-  } catch(e) {}
-}
-
-function loadSavedPlan() {
-  try {
-    const saved = localStorage.getItem(storageKey());
-    return saved ? JSON.parse(saved) : null;
-  } catch { return null; }
-}
-
-// Sovrascrive applyDishToCard per auto-salvare dopo ogni modifica
-const _origApply = applyDishToCard;
-// già definita sopra, wrap it:
-const _applyOrig = applyDishToCard;
-window._applyDishToCardBase = _applyOrig;
-
-// Patch: dopo ogni modifica salva automaticamente
-function applyAndSave(dayIdx, meal, dish, oldSource) {
-  window._applyDishToCardBase(dayIdx, meal, dish, oldSource);
-  savePlan();
-}
-
-// ─── INIT ──────────────────────────────────────────────────
-(function init() {
-  // Imposta label settimana
+/* ── INIT ──────────────────────────────────────────── */
+(async () => {
   if (weekLabelParam) {
     document.getElementById('weekLabel').textContent = 'Settimana ' + weekLabelParam;
-    document.getElementById('weekInfo').textContent  = 'Settimana del ' + weekLabelParam;
-  } else {
-    document.getElementById('weekLabel').textContent = 'Settimanale personalizzato';
-    document.getElementById('weekInfo').textContent  = 'Settimana del ' + getWeekLabel();
   }
-
-  // Carica piano salvato se esiste
-  const saved = loadSavedPlan();
+  document.getElementById('loadingOverlay').classList.add('active');
+  document.getElementById('loadingText').textContent = 'Caricamento piano...';
+  const saved = await loadSavedPlan();
+  document.getElementById('loadingOverlay').classList.remove('active');
   if (saved) {
     currentPlan = saved;
     renderPlan(currentPlan);
     document.getElementById('btnEmail').disabled = false;
     document.getElementById('btnShop').disabled = false;
-    const el = document.getElementById('saveStatus');
-    el.textContent = '📂 Piano caricato';
-    el.style.opacity = '1';
-    setTimeout(() => { el.style.opacity = '0'; }, 2500);
+    document.getElementById('weekInfo').textContent = 'Settimana del ' + (weekLabelParam || getWeekLabel());
+    showSaveStatus('📂 Piano caricato da Firebase');
   }
 })();
-
-// Patch generatePlan to also save
-const _origGenerate = generatePlan;
-generatePlan = function() {
-  document.getElementById('loadingOverlay').classList.add('active');
-  document.getElementById('loadingText').textContent = 'Generando il piano...';
-  setTimeout(() => {
-    currentPlan = buildPlan();
-    renderPlan(currentPlan);
-    document.getElementById('loadingOverlay').classList.remove('active');
-    document.getElementById('btnEmail').disabled = false;
-    document.getElementById('btnShop').disabled = false;
-    if (weekLabelParam) {
-      document.getElementById('weekInfo').textContent = 'Settimana del ' + weekLabelParam;
-    } else {
-      document.getElementById('weekInfo').textContent = 'Settimana del ' + getWeekLabel();
-    }
-    savePlan();
-  }, 500);
-};
-
-// Patch confirmSwap to save after swap
-const _origConfirmSwap = confirmSwap;
-confirmSwap = function() {
-  if (!swapSelected || !swapTarget) return;
-  const oldSource = currentPlan[swapTarget.dayIdx][swapTarget.meal].source;
-  applyDishToCard(swapTarget.dayIdx, swapTarget.meal, swapSelected, oldSource);
-  savePlan();
-  closeSwapModal();
-};
-
-// Patch confirmAiSwap to save after AI swap
-const _origConfirmAiSwap = confirmAiSwap;
-confirmAiSwap = function() {
-  if (!aiSuggestedDish || !swapTarget) return;
-  applyDishToCard(swapTarget.dayIdx, swapTarget.meal, aiSuggestedDish, null);
-  savePlan();
-  closeAiModal();
-};
-
 </script>
 </body>
 </html>
