@@ -5,32 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calendario · Piano Alimentare</title>
 
-<!-- ════════════════════════════════════════════════════════════
-     FIREBASE — Realtime Database via API REST (nessun SDK)
-     Compatibile con qualsiasi browser, anche vecchi (iPad mini 2 / iOS 12).
-     ⬇⬇⬇  La stessa config è in profili.html e piano_settimanale.html
-════════════════════════════════════════════════════════════ -->
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
-    authDomain: "pianosettimanaledb.firebaseapp.com",
-    databaseURL: "https://pianosettimanaledb-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "pianosettimanaledb",
-    storageBucket: "pianosettimanaledb.firebasestorage.app",
-    messagingSenderId: "479375847867",
-    appId: "1:479375847867:web:4178c4657379b17343d49e"
-  };
-
-  var DB_URL = (firebaseConfig.databaseURL || '').replace(/\/+$/, '');
-  var db = (DB_URL && DB_URL.indexOf('il-tuo-progetto') === -1) ? DB_URL : null;
-
-  function dbGet(path) {
-    return fetch(DB_URL + '/' + path + '.json').then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    });
-  }
-</script>
+<script src="firebase.js"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
@@ -121,6 +96,7 @@
   </div>
   <div class="header-actions">
     <a class="btn btn-ghost" href="profili.html">↩ Cambia profilo</a>
+    <button class="btn btn-ghost" onclick="fbSignOut()">Esci</button>
     <button class="btn btn-primary" onclick="goToCurrentWeek()">→ Settimana corrente</button>
   </div>
 </header>
@@ -129,7 +105,7 @@
 
   <div class="fb-warning" id="fbWarning">
     ⚠ Firebase non è configurato: i piani non possono essere salvati né caricati.
-    Incolla la tua <code>firebaseConfig</code> in cima a tutti e tre i file.
+    Controlla la <code>databaseURL</code> in <code>firebase.js</code>.
   </div>
 
   <div class="month-nav">

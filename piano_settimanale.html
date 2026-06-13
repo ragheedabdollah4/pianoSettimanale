@@ -5,43 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Piano Alimentare Settimanale</title>
 
-<!-- ════════════════════════════════════════════════════════════
-     FIREBASE — Realtime Database via API REST (nessun SDK)
-     Compatibile con qualsiasi browser, anche vecchi (iPad mini 2 / iOS 12).
-     ⬇⬇⬇  SOSTITUISCI QUI con la TUA config (basta databaseURL).
-     Lo stesso blocco va incollato anche in index.html
-════════════════════════════════════════════════════════════ -->
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
-    authDomain: "pianosettimanaledb.firebaseapp.com",
-    databaseURL: "https://pianosettimanaledb-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "pianosettimanaledb",
-    storageBucket: "pianosettimanaledb.firebasestorage.app",
-    messagingSenderId: "479375847867",
-    appId: "1:479375847867:web:4178c4657379b17343d49e"
-  };
-
-  var DB_URL = (firebaseConfig.databaseURL || '').replace(/\/+$/, '');
-  var db = (DB_URL && DB_URL.indexOf('il-tuo-progetto') === -1) ? DB_URL : null;
-
-  function dbGet(path) {
-    return fetch(DB_URL + '/' + path + '.json').then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();            // null se il nodo non esiste
-    });
-  }
-  function dbSet(path, value) {
-    return fetch(DB_URL + '/' + path + '.json', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(value)
-    }).then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    });
-  }
-</script>
+<script src="firebase.js"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');

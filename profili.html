@@ -5,46 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Profili · Piano Alimentare</title>
 
-<!-- ════════════════════════════════════════════════════════════
-     FIREBASE — Realtime Database via API REST (nessun SDK)
-     Compatibile con qualsiasi browser, anche vecchi (iPad mini 2 / iOS 12).
-     ⬇⬇⬇  La stessa config è in index.html e piano_settimanale.html
-════════════════════════════════════════════════════════════ -->
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
-    authDomain: "pianosettimanaledb.firebaseapp.com",
-    databaseURL: "https://pianosettimanaledb-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "pianosettimanaledb",
-    storageBucket: "pianosettimanaledb.firebasestorage.app",
-    messagingSenderId: "479375847867",
-    appId: "1:479375847867:web:4178c4657379b17343d49e"
-  };
-
-  var DB_URL = (firebaseConfig.databaseURL || '').replace(/\/+$/, '');
-  var db = (DB_URL && DB_URL.indexOf('il-tuo-progetto') === -1) ? DB_URL : null;
-
-  function dbGet(path) {
-    return fetch(DB_URL + '/' + path + '.json').then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    });
-  }
-  function dbSet(path, value) {
-    return fetch(DB_URL + '/' + path + '.json', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(value)
-    }).then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    });
-  }
-  function dbDelete(path) {
-    return fetch(DB_URL + '/' + path + '.json', { method: 'DELETE' })
-      .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return true; });
-  }
-</script>
+<script src="firebase.js"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
@@ -141,6 +102,7 @@
     <h1>🍽 Piano Alimentare</h1>
     <span>Scegli un profilo</span>
   </div>
+  <button class="btn btn-ghost" onclick="fbSignOut()" style="color:var(--bg);border-color:rgba(255,255,255,0.4)">Esci</button>
 </header>
 
 <!-- Add profile modal -->
@@ -184,7 +146,7 @@
 
   <div class="fb-warning" id="fbWarning">
     ⚠ Firebase non è configurato: i profili non possono essere salvati né caricati.
-    Incolla la tua <code>firebaseConfig</code> in cima a tutti e tre i file.
+    Controlla la <code>databaseURL</code> in <code>firebase.js</code>.
   </div>
 
   <div class="profiles-grid" id="profilesGrid">
@@ -235,7 +197,12 @@ async function loadProfiles() {
     }
   } catch (e) {
     console.error('Errore lettura profili:', e);
-    document.getElementById('fbWarning').style.display = 'block';
+    const w = document.getElementById('fbWarning');
+    w.innerHTML = '⚠ Connessione al database fallita: <code>' + esc(e.message || e) + '</code>.<br>' +
+      'La <code>firebaseConfig</code> in firebase.js è a posto, ma la richiesta è stata rifiutata. ' +
+      'Di solito basta aprire le <strong>Regole del Realtime Database</strong> ' +
+      '(<code>".read": true, ".write": true</code>) nella console Firebase.';
+    w.style.display = 'block';
   }
   renderProfiles();
 }

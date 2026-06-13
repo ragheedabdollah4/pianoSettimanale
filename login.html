@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accedi · Piano Alimentare</title>
+<script>window.FB_LOGIN_PAGE = true;</script>
+<script src="firebase.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
+  :root { --bg:#faf7f2; --surface:#fff; --ink:#1a1208; --muted:#7a6e5f; --accent:#c8522a; --accent2:#4a7c59; --gold:#d4a843; --border:#e8e0d4; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card { background:var(--surface); border:1px solid var(--border); width:400px; max-width:100%; padding:40px; box-shadow:0 8px 30px rgba(0,0,0,0.06); }
+  .logo { font-size:2rem; text-align:center; margin-bottom:6px; }
+  h1 { font-family:'Playfair Display',serif; font-size:1.6rem; text-align:center; margin-bottom:4px; }
+  .sub { text-align:center; color:var(--muted); font-size:0.85rem; margin-bottom:26px; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:6px; font-weight:500; }
+  .form-group input { width:100%; padding:12px 14px; border:1px solid var(--border); background:var(--bg); font-family:'DM Sans',sans-serif; font-size:0.95rem; outline:none; transition:border-color 0.2s; }
+  .form-group input:focus { border-color:var(--accent); }
+  .btn { width:100%; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; padding:13px; border:none; cursor:pointer; text-transform:uppercase; letter-spacing:0.08em; transition:all 0.2s; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#a8411d; }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-ghost { background:transparent; color:var(--ink); border:1px solid var(--border); margin-top:10px; }
+  .btn-ghost:hover { border-color:var(--ink); }
+  .msg { padding:11px 13px; font-size:0.82rem; margin-bottom:16px; display:none; line-height:1.4; }
+  .msg.error { background:#fee; border:1px solid #fcc; color:#c00; }
+  .msg.info  { background:#eef5ef; border:1px solid #cfe0d2; color:#3a6347; }
+  .connected { text-align:center; }
+  .connected .who { font-weight:600; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🍽</div>
+    <h1>Piano Alimentare</h1>
+    <p class="sub">Accedi per vedere i tuoi profili e piani</p>
+
+    <div class="msg error" id="errBox"></div>
+
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" autocomplete="username" placeholder="nome@esempio.it">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">Accedi</button>
+    </div>
+
+    <div id="connectedBox" class="connected" style="display:none">
+      <div class="msg info" style="display:block">Sei già connesso come <span class="who" id="whoEmail"></span>.</div>
+      <button class="btn btn-primary" onclick="continueNext()">Continua</button>
+      <button class="btn btn-ghost" onclick="fbSignOut()">Esci e cambia account</button>
+    </div>
+  </div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const NEXT = params.get('next') || 'profili.html';
+
+  function continueNext() { location.href = NEXT; }
+
+  // Se c'è già una sessione, proponi di continuare (niente loop automatici)
+  if (fbHasSession()) {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('connectedBox').style.display = 'block';
+    document.getElementById('whoEmail').textContent = fbEmail() || 'utente';
+  } else {
+    const e = fbEmail();
+    if (e) document.getElementById('email').value = e;
+  }
+
+  function friendly(code) {
+    if (/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(code)) return 'Email o password non corretti.';
+    if (/MISSING_PASSWORD|MISSING_EMAIL/.test(code)) return 'Inserisci email e password.';
+    if (/TOO_MANY_ATTEMPTS/.test(code)) return 'Troppi tentativi. Riprova tra qualche minuto.';
+    if (/USER_DISABLED/.test(code)) return 'Account disabilitato.';
+    return 'Accesso non riuscito: ' + code;
+  }
+
+  function doLogin() {
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('password').value;
+    const err   = document.getElementById('errBox');
+    const btn   = document.getElementById('loginBtn');
+    err.style.display = 'none';
+    if (!email || !pass) { err.textContent = 'Inserisci email e password.'; err.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = 'Accesso…';
+    fbSignIn(email, pass)
+      .then(function () { location.href = NEXT; })
+      .catch(function (e) {
+        err.textContent = friendly(e.message || String(e));
+        err.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Accedi';
+      });
+  }
+
+  // invio con Enter
+  document.getElementById('password') && document.getElementById('password').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') doLogin();
+  });
+</script>
+</body>
+</html>
