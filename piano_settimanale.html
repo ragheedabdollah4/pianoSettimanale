@@ -6,13 +6,11 @@
 <title>Piano Alimentare Settimanale</title>
 
 <!-- ════════════════════════════════════════════════════════════
-     FIREBASE — Realtime Database
-     ⬇⬇⬇  SOSTITUISCI QUI con la TUA config (Console Firebase →
-     Impostazioni progetto → Le tue app → SDK setup and configuration)
-     Lo stesso identico blocco va incollato anche in calendario.html
+     FIREBASE — Realtime Database via API REST (nessun SDK)
+     Compatibile con qualsiasi browser, anche vecchi (iPad mini 2 / iOS 12).
+     ⬇⬇⬇  SOSTITUISCI QUI con la TUA config (basta databaseURL).
+     Lo stesso blocco va incollato anche in index.html
 ════════════════════════════════════════════════════════════ -->
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
@@ -24,12 +22,24 @@
     appId: "1:479375847867:web:4178c4657379b17343d49e"
   };
 
-  let db = null;
-  try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-  } catch (e) {
-    console.error("Firebase non inizializzato:", e);
+  var DB_URL = (firebaseConfig.databaseURL || '').replace(/\/+$/, '');
+  var db = (DB_URL && DB_URL.indexOf('il-tuo-progetto') === -1) ? DB_URL : null;
+
+  function dbGet(path) {
+    return fetch(DB_URL + '/' + path + '.json').then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();            // null se il nodo non esiste
+    });
+  }
+  function dbSet(path, value) {
+    return fetch(DB_URL + '/' + path + '.json', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(value)
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
   }
 </script>
 
@@ -110,6 +120,10 @@
   .save-status.error { border-left-color: var(--accent); }
 
   /* Custom dish input in swap modal */
+  .swap-source-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .swap-source-row .ch-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 500; margin: 0; }
+  .swap-source-row select { flex: 1; padding: 10px 12px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; }
+  .swap-source-row select:focus { border-color: var(--accent); }
   .custom-dish { margin-top: 18px; border-top: 1px dashed var(--border); padding-top: 16px; }
   .custom-dish .ch-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
   .custom-dish-row { display: flex; gap: 8px; }
@@ -290,8 +304,22 @@
 <div class="modal-bg" id="swapModal">
   <div class="modal">
     <h2>🔄 Cambia Pasto</h2>
-    <p class="modal-subtitle">Scegli un'alternativa con la stessa fonte proteica.</p>
+    <p class="modal-subtitle">Scegli un'alternativa: stessa fonte o cambiala dal menu.</p>
     <div class="swap-context" id="swapContext"></div>
+    <div class="swap-source-row">
+      <label class="ch-label">Fonte proteica</label>
+      <select id="swapSourceFilter" onchange="renderSwapAlternatives()">
+        <option value="Pesce">Pesce</option>
+        <option value="Legumi">Legumi</option>
+        <option value="Carne Bianca">Carne Bianca</option>
+        <option value="Carne Rossa">Carne Rossa</option>
+        <option value="Latticini">Latticini</option>
+        <option value="Uova">Uova</option>
+        <option value="Affettati Magri">Affettati</option>
+        <option value="Stella">⭐ Stella</option>
+        <option value="Insalate">Insalate</option>
+      </select>
+    </div>
     <div class="alternatives-list" id="alternativesList"></div>
     <div class="custom-dish">
       <div class="ch-label">…oppure scrivi un piatto completamente diverso</div>
@@ -321,12 +349,12 @@
 <div class="modal-bg" id="aiModal">
   <div class="modal">
     <h2>✨ Suggerimento AI</h2>
-    <p class="modal-subtitle">Claude suggerisce un'alternativa adatta al tuo piano.</p>
+    <p class="modal-subtitle">Un'alternativa con la stessa fonte proteica, scelta tra i piatti non ancora in settimana.</p>
     <div class="swap-context" id="aiContext"></div>
     <div class="ai-suggest-box" id="aiSuggestBox">
       <div class="ai-loading" id="aiLoading">
         <div class="ai-spinner"></div>
-        <span>Claude sta pensando al piatto perfetto...</span>
+        <span>Sto scegliendo un'alternativa…</span>
       </div>
       <div id="aiResult" style="display:none"></div>
     </div>
@@ -341,11 +369,11 @@
 <div class="modal-bg" id="shopModal">
   <div class="modal">
     <h2>🛒 Lista della spesa</h2>
-    <p class="modal-subtitle">Ingredienti per i piatti di questa settimana, raggruppati per reparto.</p>
+    <p class="modal-subtitle">Ingredienti dei piatti della settimana, raggruppati per reparto.</p>
     <div class="shop-box" id="shopBox">
       <div class="ai-loading" id="shopLoading">
         <div class="ai-spinner"></div>
-        <span>Claude sta preparando la lista…</span>
+        <span>Sto preparando la lista…</span>
       </div>
       <div id="shopResult" style="display:none"></div>
     </div>
@@ -437,13 +465,59 @@ const DISHES = [
   { name: "Aperitivo Eataly", source: "Stella" },
 ];
 
-// min = vincolo minimo garantito · max = tetto massimo · extraWeight = priorità per gli slot extra
+// Ingredienti per piatto (per la lista della spesa offline).
+// Categorie: P=Pescheria, M=Macelleria, V=Frutta e verdura, D=Dispensa e secchi, L=Latticini e uova, B=Pane e forno
+const CAT_NAMES = { P: "Pescheria", M: "Macelleria", V: "Frutta e verdura", D: "Dispensa e secchi", L: "Latticini e uova", B: "Pane e forno" };
+const CAT_ORDER = ["P", "M", "V", "L", "D", "B"];
+const INGREDIENTS = {
+  "Pollo e patate":        [["Pollo", "M"], ["Patate", "V"], ["Rosmarino", "V"], ["Olio d'oliva", "D"]],
+  "Branzino al forno":     [["Branzino", "P"], ["Limone", "V"], ["Patate", "V"], ["Prezzemolo", "V"], ["Olio d'oliva", "D"]],
+  "Poke Salmone":          [["Salmone fresco", "P"], ["Riso per sushi", "D"], ["Avocado", "V"], ["Edamame", "V"], ["Salsa di soia", "D"], ["Semi di sesamo", "D"]],
+  "Poke Tonno":            [["Tonno fresco", "P"], ["Riso per sushi", "D"], ["Avocado", "V"], ["Cetriolo", "V"], ["Salsa di soia", "D"], ["Semi di sesamo", "D"]],
+  "Grigliata di tonno":    [["Tonno fresco", "P"], ["Limone", "V"], ["Rucola", "V"], ["Olio d'oliva", "D"]],
+  "Udon gamberetti zucchine e carote": [["Gamberetti", "P"], ["Noodle udon", "D"], ["Zucchine", "V"], ["Carote", "V"], ["Salsa di soia", "D"], ["Zenzero", "V"]],
+  "Risotto frutti di mare":[["Frutti di mare misti", "P"], ["Riso Carnaroli", "D"], ["Aglio", "V"], ["Prezzemolo", "V"], ["Vino bianco", "D"], ["Brodo vegetale", "D"]],
+  "Risotto gamberi":       [["Gamberi", "P"], ["Riso Carnaroli", "D"], ["Zucchine", "V"], ["Brodo vegetale", "D"], ["Vino bianco", "D"]],
+  "Lupo di mare":          [["Spigola (lupo di mare)", "P"], ["Limone", "V"], ["Patate", "V"], ["Olio d'oliva", "D"]],
+  "Salmone al forno con arancia": [["Salmone", "P"], ["Arance", "V"], ["Timo", "V"], ["Olio d'oliva", "D"]],
+  "Salmone con salsa norvegese":  [["Salmone", "P"], ["Panna da cucina", "L"], ["Senape", "D"], ["Aneto", "V"]],
+  "Zuppa di lenticchie":   [["Lenticchie", "D"], ["Carote", "V"], ["Sedano", "V"], ["Cipolla", "V"], ["Passata di pomodoro", "D"], ["Brodo vegetale", "D"]],
+  "Pasta e fagioli":       [["Fagioli borlotti", "D"], ["Pasta corta", "D"], ["Passata di pomodoro", "D"], ["Sedano", "V"], ["Carote", "V"], ["Cipolla", "V"]],
+  "Hummus":                [["Ceci", "D"], ["Tahini", "D"], ["Limone", "V"], ["Aglio", "V"], ["Olio d'oliva", "D"]],
+  "Insalata di couscous/riso con legumi": [["Couscous", "D"], ["Ceci", "D"], ["Pomodorini", "V"], ["Cetriolo", "V"], ["Prezzemolo", "V"]],
+  "Polpette con legumi":   [["Ceci o lenticchie", "D"], ["Pangrattato", "D"], ["Cipolla", "V"], ["Spezie miste", "D"]],
+  "Falafel":               [["Ceci secchi", "D"], ["Prezzemolo", "V"], ["Aglio", "V"], ["Cumino", "D"], ["Cipolla", "V"]],
+  "Pollo alle mandorle":   [["Pollo", "M"], ["Mandorle", "D"], ["Peperone", "V"], ["Salsa di soia", "D"]],
+  "Cosce di pollo al vino":[["Cosce di pollo", "M"], ["Vino", "D"], ["Cipolla", "V"], ["Carote", "V"]],
+  "Pollo speziato all'arancia": [["Pollo", "M"], ["Arance", "V"], ["Miele", "D"], ["Spezie miste", "D"]],
+  "Pollo marinato":        [["Pollo", "M"], ["Limone", "V"], ["Olio d'oliva", "D"], ["Spezie miste", "D"]],
+  "Pollo alla griglia":    [["Pollo", "M"], ["Limone", "V"], ["Olio d'oliva", "D"]],
+  "Pollo allo spiedo":     [["Pollo intero", "M"], ["Patate", "V"], ["Rosmarino", "V"]],
+  "Pollo al curry":        [["Pollo", "M"], ["Curry", "D"], ["Latte di cocco", "D"], ["Cipolla", "V"], ["Riso basmati", "D"]],
+  "Filetto alla griglia":  [["Filetto di manzo", "M"], ["Rosmarino", "V"], ["Olio d'oliva", "D"]],
+  "Polpette al sugo":      [["Macinato di manzo", "M"], ["Passata di pomodoro", "D"], ["Pangrattato", "D"], ["Uova", "L"], ["Cipolla", "V"]],
+  "Hamburger":             [["Macinato di manzo", "M"], ["Panini da hamburger", "B"], ["Insalata", "V"], ["Pomodoro", "V"], ["Cipolla", "V"]],
+  "Insalata di farro con feta": [["Farro", "D"], ["Feta", "L"], ["Pomodorini", "V"], ["Cetriolo", "V"], ["Olive", "D"]],
+  "Polpettone veg e ricotta":   [["Ricotta", "L"], ["Spinaci", "V"], ["Pangrattato", "D"], ["Uova", "L"], ["Verdure miste", "V"]],
+  "Pasta al pomodoro con parmigiano/grana": [["Pasta", "D"], ["Passata di pomodoro", "D"], ["Parmigiano/Grana", "L"], ["Basilico", "V"]],
+  "Insalata melone e feta":[["Melone", "V"], ["Feta", "L"], ["Menta", "V"]],
+  "Frittata asparagi":     [["Uova", "L"], ["Asparagi", "V"]],
+  "Frittata porro e zucchine": [["Uova", "L"], ["Porro", "V"], ["Zucchine", "V"]],
+  "Uova (generico)":       [["Uova", "L"]],
+  "Fattoush con crostini di pane": [["Pomodoro", "V"], ["Cetriolo", "V"], ["Lattuga", "V"], ["Pane", "B"], ["Limone", "V"]],
+  "Insalata di finocchio": [["Finocchio", "V"], ["Arance", "V"], ["Olio d'oliva", "D"]],
+  "Insalata pomodoro e cipolla": [["Pomodoro", "V"], ["Cipolla", "V"], ["Olio d'oliva", "D"]],
+  "Piadina con affettati": [["Piadine", "B"], ["Affettati magri (bresaola/prosciutto)", "M"], ["Insalata", "V"]],
+  // Stella (pizza, sushi, ristorante, aperitivo): pasti fuori → nessun ingrediente
+};
+
+// min = minimo garantito · max = tetto massimo (mostrato come x/max) · extraWeight = priorità per gli slot extra
 const FREQUENCIES = {
-  "Pesce":        { min: 3, max: 4, extraWeight: 4, label: "Pesce",        color: "var(--pesce)" },
-  "Legumi":       { min: 2, max: 3, extraWeight: 3, label: "Legumi",       color: "var(--legumi)" },
+  "Pesce":        { min: 3, max: 3, extraWeight: 0, label: "Pesce",        color: "var(--pesce)" },
+  "Legumi":       { min: 2, max: 3, extraWeight: 4, label: "Legumi",       color: "var(--legumi)" },
   "Uova":         { min: 2, max: 3, extraWeight: 3, label: "Uova",         color: "var(--uova)" },
-  "Carne Bianca": { min: 1, max: 2, extraWeight: 1, label: "Carne Bianca", color: "var(--bianca)" },
-  "Latticini":    { min: 1, max: 2, extraWeight: 1, label: "Latticini",    color: "var(--latticini)" },
+  "Carne Bianca": { min: 1, max: 2, extraWeight: 2, label: "Carne Bianca", color: "var(--bianca)" },
+  "Latticini":    { min: 1, max: 2, extraWeight: 2, label: "Latticini",    color: "var(--latticini)" },
   "Carne Rossa":  { min: 0, max: 1, extraWeight: 1, label: "Carne Rossa",  color: "var(--rossa)" },
   "Affettati Magri": { min: 0, max: 1, extraWeight: 1, label: "Affettati", color: "var(--affettati)" },
   "Stella":       { min: 1, max: 1, extraWeight: 0, label: "⭐ Stella",    color: "var(--stella)" },
@@ -545,23 +619,22 @@ function savePlan() {
       cena:   { name: d.cena.name,   source: d.cena.source,   done: normDone(d.cena.done) },
     })),
   };
-  db.ref('piani/' + currentWeekId).set(payload)
-    .then(() => showSaveStatus('✓ Salvato'))
-    .catch(err => { console.error(err); showSaveStatus('⚠ Errore salvataggio', true); });
+  db ? dbSet('piani/' + currentWeekId, payload)
+        .then(function () { showSaveStatus('✓ Salvato'); })
+        .catch(function (err) { console.error(err); showSaveStatus('⚠ Errore salvataggio', true); })
+     : showSaveStatus('⚠ Firebase non configurato', true);
 }
 
 async function loadSavedPlan() {
   if (!db) return { error: 'Firebase non configurato' };
   try {
     // timeout di sicurezza: se la connessione resta appesa, non blocchiamo la pagina
-    const ref = db.ref('piani/' + currentWeekId);
-    const snap = await Promise.race([
-      ref.get(),
+    const data = await Promise.race([
+      dbGet('piani/' + currentWeekId),
       new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout: nessuna risposta da Firebase')), 8000)),
     ]);
-    if (!snap.exists()) return null;
-    const data = snap.val();
-    let days = data && data.days;
+    if (!data) return null;
+    let days = data.days;
     // Realtime DB può restituire un array come oggetto {0:..,1:..}: normalizziamo
     if (days && !Array.isArray(days)) days = Object.values(days);
     if (!Array.isArray(days) || !days.length) return null;
@@ -574,7 +647,7 @@ async function loadSavedPlan() {
         pranzo: mapMeal(d && d.pranzo),
         cena:   mapMeal(d && d.cena),
       })),
-      people: data && data.people ? data.people : null,
+      people: data.people ? data.people : null,
     };
   } catch (err) {
     console.error('Errore caricamento:', err);
@@ -751,11 +824,11 @@ function refreshFreqBar(plan) {
   const bar = document.getElementById('freqBar');
   bar.innerHTML = '';
   for (const [src, conf] of Object.entries(FREQUENCIES)) {
+    const n = counts[src] || 0;
     const b = document.createElement('div');
     b.className = 'freq-badge';
     b.style.background = conf.color;
-    const min = conf.min ? ` <span style="opacity:0.8">(min ${conf.min})</span>` : '';
-    b.innerHTML = `<span>${conf.label}</span> <span class="count">${counts[src]||0}x</span>`;
+    b.innerHTML = `<span>${conf.label}</span> <span class="count">${n}/${conf.max}</span>`;
     bar.appendChild(b);
   }
 }
@@ -809,7 +882,7 @@ function onNameChange() {
   clearTimeout(nameSaveTimer);
   nameSaveTimer = setTimeout(() => {
     savePlan();
-    if (db) db.ref('persone').set(currentPeople).catch(() => {});
+    if (db) dbSet('persone', currentPeople).catch(() => {});
   }, 600);
 }
 
@@ -830,29 +903,13 @@ function openSwapModal(dayIdx, meal) {
   const current = currentPlan[dayIdx][meal];
   document.getElementById('swapContext').innerHTML = swapContextHTML(dayIdx, meal);
 
-  const alternatives = DISHES.filter(d => d.source === current.source && d.name !== current.name);
-  const listEl = document.getElementById('alternativesList');
-  listEl.innerHTML = '';
-  if (!alternatives.length) {
-    listEl.innerHTML = '<p class="no-alts">Nessuna alternativa disponibile per questa fonte.</p>';
-  } else {
-    alternatives.forEach(dish => {
-      const item = document.createElement('div');
-      item.className = 'alt-item';
-      item.innerHTML = `<div><div class="alt-item-name">${dish.name}</div><div class="alt-item-src">${dish.source}</div></div><span class="check-icon">✓</span>`;
-      item.onclick = () => {
-        document.querySelectorAll('.alt-item').forEach(i => i.classList.remove('selected'));
-        item.classList.add('selected');
-        document.getElementById('customDishName').value = '';
-        swapSelected = dish;
-        document.getElementById('confirmSwapBtn').disabled = false;
-      };
-      listEl.appendChild(item);
-    });
-  }
+  // imposta il filtro fonte sulla fonte attuale, poi disegna le alternative
+  document.getElementById('swapSourceFilter').value = current.source;
+  renderSwapAlternatives();
+
   document.getElementById('confirmSwapBtn').disabled = true;
 
-  // Reset campo piatto personalizzato (precompila la fonte attuale)
+  // Reset campo piatto personalizzato (precompila la fonte selezionata)
   const ci = document.getElementById('customDishName');
   const cs = document.getElementById('customDishSource');
   ci.value = '';
@@ -870,6 +927,41 @@ function openSwapModal(dayIdx, meal) {
   document.getElementById('swapModal').classList.add('active');
 }
 
+// Disegna l'elenco dei piatti per la fonte selezionata nel menu (anche diversa da quella attuale)
+function renderSwapAlternatives() {
+  swapSelected = null;
+  document.getElementById('confirmSwapBtn').disabled = true;
+  const current = swapTarget ? currentPlan[swapTarget.dayIdx][swapTarget.meal] : null;
+  const source = document.getElementById('swapSourceFilter').value;
+  // se è la fonte attuale, escludi il piatto corrente; se è un'altra fonte, mostra tutto
+  const alternatives = DISHES.filter(d =>
+    d.source === source && !(current && d.source === current.source && d.name === current.name));
+
+  // allinea il selettore del piatto personalizzato alla fonte scelta
+  const cs = document.getElementById('customDishSource');
+  if (cs) cs.value = source;
+
+  const listEl = document.getElementById('alternativesList');
+  listEl.innerHTML = '';
+  if (!alternatives.length) {
+    listEl.innerHTML = '<p class="no-alts">Nessun piatto per questa fonte. Scrivine uno qui sotto.</p>';
+    return;
+  }
+  alternatives.forEach(dish => {
+    const item = document.createElement('div');
+    item.className = 'alt-item';
+    item.innerHTML = `<div><div class="alt-item-name">${escapeHtml(dish.name)}</div><div class="alt-item-src">${escapeHtml(dish.source)}</div></div><span class="check-icon">✓</span>`;
+    item.onclick = () => {
+      document.querySelectorAll('.alt-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+      document.getElementById('customDishName').value = '';
+      swapSelected = dish;
+      document.getElementById('confirmSwapBtn').disabled = false;
+    };
+    listEl.appendChild(item);
+  });
+}
+
 function confirmSwap() {
   if (!swapTarget) return;
   const customName = document.getElementById('customDishName').value.trim();
@@ -881,7 +973,7 @@ function confirmSwap() {
   } else {
     return;
   }
-  applyDishToCard(swapTarget.dayIdx, swapTarget.meal, dish);
+  applyDishToCard(swapTarget.dayIdx, swapTarget.meal, { name: dish.name, source: dish.source });
   closeSwapModal();
 }
 
@@ -897,111 +989,58 @@ function openAiModal(dayIdx, meal) {
   aiSuggestedDish = null;
 
   document.getElementById('aiContext').innerHTML = swapContextHTML(dayIdx, meal);
-  document.getElementById('aiLoading').style.display = 'flex';
+  document.getElementById('aiLoading').style.display = 'none';
   document.getElementById('aiResult').style.display = 'none';
   document.getElementById('confirmAiBtn').disabled = true;
   document.getElementById('aiModal').classList.add('active');
 
-  callClaudeForSuggestion(dayIdx, meal);
+  suggestLocally(dayIdx, meal);
 }
 
-async function callClaudeForSuggestion(dayIdx, meal) {
+// Suggerimento calcolato in locale: stessa fonte, preferendo piatti non ancora usati in settimana
+function suggestLocally(dayIdx, meal) {
   const current = currentPlan[dayIdx][meal];
-  const otherMeal = meal === 'pranzo' ? 'cena' : 'pranzo';
-  const otherDish = currentPlan[dayIdx][otherMeal];
 
-  // Build context: what's already in the week
-  const weekContext = currentPlan.map(d =>
-    `${d.day}: Pranzo = ${d.pranzo.name} (${d.pranzo.source}), Cena = ${d.cena.name} (${d.cena.source})`
-  ).join('\n');
+  // piatti già presenti questa settimana
+  const usedNames = new Set();
+  currentPlan.forEach(d => { usedNames.add(d.pranzo.name); usedNames.add(d.cena.name); });
 
-  const availableAlts = DISHES
-    .filter(d => d.source === current.source && d.name !== current.name)
-    .map(d => d.name);
+  const sameSource = DISHES.filter(d => d.source === current.source && d.name !== current.name);
+  const fresh = sameSource.filter(d => !usedNames.has(d.name)); // non ancora in settimana
+  const pool = fresh.length ? fresh : sameSource;
 
-  const prompt = `Sei un nutrizionista. L'utente vuole sostituire un pasto del suo piano settimanale.
+  const res = document.getElementById('aiResult');
+  res.style.display = 'block';
 
-PIANO ATTUALE DELLA SETTIMANA:
-${weekContext}
-
-PASTO DA SOSTITUIRE:
-Giorno: ${DAYS[dayIdx]}
-Momento: ${meal === 'pranzo' ? 'Pranzo' : 'Cena'}
-Piatto attuale: ${current.name} (fonte proteica: ${current.source})
-Altro pasto dello stesso giorno: ${otherDish.name} (${otherDish.source})
-
-PIATTI DISPONIBILI CON LA STESSA FONTE PROTEICA (${current.source}):
-${availableAlts.length ? availableAlts.join(', ') : 'nessuno oltre quello attuale'}
-
-Suggerisci IL MIGLIORE piatto alternativo dalla lista. Considera:
-- Varietà rispetto al resto della settimana (evita piatti già presenti)
-- Complementarità con l'altro pasto dello stesso giorno
-- Equilibrio generale della settimana
-
-Rispondi SOLO con un oggetto JSON (niente testo extra, niente backtick):
-{
-  "piatto": "nome esatto dalla lista",
-  "motivo": "spiegazione breve in italiano (max 2 frasi) del perché è la scelta migliore"
-}
-
-Se non ci sono alternative disponibili, usa: {"piatto": null, "motivo": "Nessuna alternativa disponibile."}`;
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 300,
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content?.map(b => b.text || '').join('') || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-
-    document.getElementById('aiLoading').style.display = 'none';
-
-    if (!parsed.piatto) {
-      document.getElementById('aiResult').style.display = 'block';
-      document.getElementById('aiResult').innerHTML = `<p style="color:var(--muted);font-size:0.85rem;font-style:italic">Nessuna alternativa disponibile per questa fonte proteica.</p>`;
-      return;
-    }
-
-    // Find the dish object
-    const found = DISHES.find(d => d.name === parsed.piatto && d.source === current.source);
-    aiSuggestedDish = found || { name: parsed.piatto, source: current.source };
-
-    const srcCls = SOURCE_CLASS[current.source] || 'src-insalate';
-    document.getElementById('aiResult').style.display = 'block';
-    document.getElementById('aiResult').innerHTML = `
-      <div class="ai-label">✨ Suggerimento Claude</div>
-      <div class="ai-suggest-dish">${aiSuggestedDish.name}</div>
-      <div class="ai-suggest-source ${srcCls}">${current.source}</div>
-      <div class="ai-suggest-reason">${parsed.motivo}</div>
-      <button class="ai-retry-btn" onclick="retryAiSuggest()">🔄 Altro suggerimento</button>
-    `;
-    document.getElementById('confirmAiBtn').disabled = false;
-
-  } catch (err) {
-    document.getElementById('aiLoading').style.display = 'none';
-    document.getElementById('aiResult').style.display = 'block';
-    document.getElementById('aiResult').innerHTML = `
-      <p style="color:#c00;font-size:0.82rem">Errore nella connessione. Riprova.</p>
-      <button class="ai-retry-btn" style="margin-top:10px" onclick="retryAiSuggest()">🔄 Riprova</button>
-    `;
+  if (!pool.length) {
+    res.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;font-style:italic">Nessuna alternativa disponibile per la fonte "${escapeHtml(current.source)}". Usa "✏ Cambia" per scegliere un'altra fonte.</p>`;
+    document.getElementById('confirmAiBtn').disabled = true;
+    return;
   }
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  aiSuggestedDish = { name: pick.name, source: pick.source, done: { p1: false, p2: false } };
+
+  const reason = fresh.length
+    ? `Piatto di ${current.source.toLowerCase()} non ancora presente in settimana: aggiunge varietà mantenendo la stessa fonte proteica.`
+    : `Alternativa di ${current.source.toLowerCase()} per cambiare piatto mantenendo la fonte proteica.`;
+
+  const srcCls = SOURCE_CLASS[current.source] || 'src-insalate';
+  res.innerHTML = `
+    <div class="ai-label">✨ Suggerimento</div>
+    <div class="ai-suggest-dish">${escapeHtml(pick.name)}</div>
+    <div class="ai-suggest-source ${srcCls}">${escapeHtml(current.source)}</div>
+    <div class="ai-suggest-reason">${reason}</div>
+    <button class="ai-retry-btn" onclick="retryAiSuggest()">🔄 Altro suggerimento</button>
+  `;
+  document.getElementById('confirmAiBtn').disabled = false;
 }
 
 function retryAiSuggest() {
   if (!swapTarget) return;
   aiSuggestedDish = null;
-  document.getElementById('aiLoading').style.display = 'flex';
-  document.getElementById('aiResult').style.display = 'none';
   document.getElementById('confirmAiBtn').disabled = true;
-  callClaudeForSuggestion(swapTarget.dayIdx, swapTarget.meal);
+  suggestLocally(swapTarget.dayIdx, swapTarget.meal);
 }
 
 function confirmAiSwap() {
@@ -1021,61 +1060,52 @@ let shopListText = '';
 
 function openShopModal() {
   if (!currentPlan) return;
-  document.getElementById('shopLoading').style.display = 'flex';
+  document.getElementById('shopLoading').style.display = 'none';
   document.getElementById('shopResult').style.display = 'none';
   document.getElementById('shopResult').innerHTML = '';
   document.getElementById('copyShopBtn').disabled = true;
   document.getElementById('shopModal').classList.add('active');
-  callClaudeForShopList();
+  buildShopList();
 }
 
-async function callClaudeForShopList() {
-  const dishes = [];
-  currentPlan.forEach(d => { dishes.push(d.pranzo.name, d.cena.name); });
-  const uniqueDishes = [...new Set(dishes)];
+// Costruisce la lista della spesa in locale, dagli ingredienti dei piatti della settimana
+function buildShopList() {
+  const dishNames = [];
+  currentPlan.forEach(d => { dishNames.push(d.pranzo.name, d.cena.name); });
+  const uniqueDishes = [...new Set(dishNames)];
 
-  const prompt = `Sei un assistente di cucina. Ecco i piatti del piano settimanale (pranzo e cena per 7 giorni):
-
-${uniqueDishes.map(n => '- ' + n).join('\n')}
-
-Genera la LISTA DELLA SPESA completa per cucinare questi piatti per una persona.
-Regole:
-- Raggruppa gli ingredienti per reparto del supermercato (es. "Pescheria", "Macelleria", "Frutta e verdura", "Dispensa e secchi", "Latticini e uova", "Pane e forno", "Altro").
-- Accorpa gli ingredienti che si ripetono in più piatti in una sola voce, sommando indicativamente le quantità.
-- Indica quantità realistiche e approssimative (es. "Pomodori – 500 g", "Limoni – 2").
-- Ometti acqua, sale e pepe.
-- Usa nomi in italiano.
-
-Rispondi SOLO con un oggetto JSON valido (niente testo extra, niente backtick), in questo formato:
-{
-  "reparti": [
-    { "nome": "Pescheria", "ingredienti": ["Salmone fresco – 400 g", "Gamberi – 300 g"] },
-    { "nome": "Frutta e verdura", "ingredienti": ["..."] }
-  ]
-}`;
-
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1200,
-        messages: [{ role: "user", content: prompt }]
-      })
+  // categoria -> Map(nomeIngrediente -> {count, dishes:Set})
+  const byCat = {};
+  const unknown = [];
+  uniqueDishes.forEach(name => {
+    const ing = INGREDIENTS[name];
+    if (!ing) {
+      // piatto "fuori casa" (Stella) o personalizzato: lo segnaliamo a parte se non è Stella
+      const dish = currentPlan.flatMap(d => [d.pranzo, d.cena]).find(m => m.name === name);
+      if (dish && dish.source !== 'Stella') unknown.push(name);
+      return;
+    }
+    ing.forEach(([item, cat]) => {
+      byCat[cat] = byCat[cat] || {};
+      const key = item.toLowerCase();
+      if (!byCat[cat][key]) byCat[cat][key] = { label: item, count: 0 };
+      byCat[cat][key].count++;
     });
-    const data = await response.json();
-    const text = data.content?.map(b => b.text || '').join('') || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    renderShopList(parsed.reparti || []);
-  } catch (err) {
-    console.error('Errore lista spesa:', err);
-    document.getElementById('shopLoading').style.display = 'none';
-    const res = document.getElementById('shopResult');
-    res.style.display = 'block';
-    res.innerHTML = `<div class="shop-error">Errore nella generazione della lista. <button class="ai-retry-btn" onclick="callClaudeForShopList()">🔄 Riprova</button></div>`;
+  });
+
+  const reparti = [];
+  CAT_ORDER.forEach(cat => {
+    if (!byCat[cat]) return;
+    const items = Object.values(byCat[cat])
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .map(o => o.count > 1 ? `${o.label} (×${o.count})` : o.label);
+    reparti.push({ nome: CAT_NAMES[cat], ingredienti: items });
+  });
+  if (unknown.length) {
+    reparti.push({ nome: 'Da definire (piatti personalizzati)', ingredienti: unknown });
   }
+
+  renderShopList(reparti);
 }
 
 function renderShopList(reparti) {
@@ -1084,20 +1114,20 @@ function renderShopList(reparti) {
   res.style.display = 'block';
 
   if (!reparti.length) {
-    res.innerHTML = '<div class="shop-empty">Nessun ingrediente trovato.</div>';
+    res.innerHTML = '<div class="shop-empty">Nessun ingrediente da comprare (forse solo pasti fuori casa questa settimana).</div>';
     return;
   }
 
-  // Testo per copia/email
+  // Testo per copia
   let txt = `Lista della spesa – Settimana del ${currentWeekLabel}\n\n`;
   let html = '';
   reparti.forEach(rep => {
     const items = rep.ingredienti || [];
     if (!items.length) return;
     txt += `${rep.nome}\n` + items.map(i => '  - ' + i).join('\n') + '\n\n';
-    html += `<div class="shop-cat"><h3>${rep.nome}</h3>`;
+    html += `<div class="shop-cat"><h3>${escapeHtml(rep.nome)}</h3>`;
     items.forEach(item => {
-      html += `<label class="shop-item"><input type="checkbox" onchange="this.closest('.shop-item').classList.toggle('checked', this.checked)"><span>${item}</span></label>`;
+      html += `<label class="shop-item"><input type="checkbox" onchange="this.closest('.shop-item').classList.toggle('checked', this.checked)"><span>${escapeHtml(item)}</span></label>`;
     });
     html += `</div>`;
   });
@@ -1152,7 +1182,7 @@ function sendEmail() {
   errEl.style.display = 'none';
   const week = currentWeekLabel;
   let body = `Piano Alimentare – Settimana del ${week}\n\n`;
-  currentPlan?.forEach(d => {
+  currentPlan && currentPlan.forEach(function(d) {
     body += `${d.day}\n`;
     body += `  ☀ Pranzo: ${d.pranzo.name} (${d.pranzo.source})\n`;
     body += `  🌙 Cena:  ${d.cena.name} (${d.cena.source})\n\n`;
@@ -1177,7 +1207,7 @@ function sendEmail() {
 });
 
 document.getElementById('weekLabel').textContent = 'Settimana ' + currentWeekLabel;
-console.log('%c[Piano] versione v3 caricata · settimana ' + currentWeekId + ' · Firebase ' + (db ? 'connesso' : 'NON configurato'), 'color:#c8522a;font-weight:bold');
+console.log('%c[Piano] versione v6 caricata · settimana ' + currentWeekId + ' · Firebase ' + (db ? 'connesso' : 'NON configurato'), 'color:#c8522a;font-weight:bold');
 
 // ─── INIT: carica il piano salvato di questa settimana, se esiste ─
 function showGridMessage(html) {
@@ -1192,11 +1222,8 @@ function showGridMessage(html) {
   // nomi predefiniti globali (per le nuove settimane)
   if (db) {
     try {
-      const ps = await db.ref('persone').get();
-      if (ps.exists() && ps.val()) {
-        const v = ps.val();
-        currentPeople = { p1: v.p1 || currentPeople.p1, p2: v.p2 || currentPeople.p2 };
-      }
+      const v = await dbGet('persone');
+      if (v) currentPeople = { p1: v.p1 || currentPeople.p1, p2: v.p2 || currentPeople.p2 };
     } catch (e) { /* best effort */ }
   }
 
