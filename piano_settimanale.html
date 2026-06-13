@@ -24,7 +24,7 @@
   header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
   header span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); font-weight: 500; }
 
-  .container { max-width: 1200px; margin: 0 auto; padding: 40px 32px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 40px 32px; }
   .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 40px; flex-wrap: wrap; }
 
   .btn { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 12px 24px; border: none; border-radius: 0; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.2s; }
@@ -42,7 +42,7 @@
   .freq-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; color: white; }
   .freq-badge .count { font-weight: 700; }
 
-  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; margin-bottom: 40px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 40px; }
   .day-col { background: var(--surface); border: 1px solid var(--border); min-width: 0; }
   .day-header { background: var(--ink); color: var(--bg); padding: 10px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; position: relative; }
   .day-swap { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: var(--bg); cursor: pointer; border-radius: 3px; font-size: 0.85rem; line-height: 1; transition: all 0.15s; }
@@ -61,16 +61,16 @@
   .sgarro-opt { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px solid var(--border); background: var(--bg); cursor: pointer; border-radius: 8px; transition: all 0.15s; }
   .sgarro-opt:hover { border-color: var(--gold); background: #fffaf0; transform: translateY(-1px); }
 
-  .meal-slot { padding: 12px; border-bottom: 1px solid var(--border); min-height: 120px; }
+  .meal-slot { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
   .meal-slot:last-child { border-bottom: none; }
   .meal-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; }
 
   .meal-actions { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
   .swap-btn {
-    font-size: 0.58rem; padding: 2px 6px; border: 1px solid var(--border);
-    background: transparent; cursor: pointer; border-radius: 2px; color: var(--muted);
+    font-size: 0.66rem; padding: 4px 8px; border: 1px solid var(--border);
+    background: transparent; cursor: pointer; border-radius: 3px; color: var(--muted);
     font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.05em;
-    transition: all 0.15s; line-height: 1.6; white-space: nowrap; text-align: center;
+    transition: all 0.15s; line-height: 1.5; white-space: nowrap; text-align: center;
   }
   .swap-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
   .swap-btn.ai { border-color: var(--gold); color: #a07a20; }
@@ -79,8 +79,8 @@
   .meal-card { padding: 8px 10px; border-left: 3px solid; background: rgba(0,0,0,0.02); transition: background 0.2s; }
   .meal-card.just-changed { animation: highlight 0.7s ease; }
   @keyframes highlight { 0% { background: rgba(212,168,67,0.3); } 100% { background: rgba(0,0,0,0.02); } }
-  .meal-name { font-size: 0.8rem; font-weight: 500; line-height: 1.3; margin-bottom: 4px; overflow-wrap: anywhere; word-break: break-word; }
-  .meal-source { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; opacity: 0.7; }
+  .meal-name { font-size: 0.88rem; font-weight: 500; line-height: 1.35; margin-bottom: 4px; overflow-wrap: anywhere; word-break: break-word; }
+  .meal-source { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; opacity: 0.7; }
 
   .src-pesce    { border-color: var(--pesce);    color: var(--pesce); }
   .src-legumi   { border-color: var(--legumi);   color: var(--legumi); }
@@ -120,7 +120,7 @@
 
   .done-row { display: flex; gap: 4px; margin-top: 8px; }
   .done-chip {
-    flex: 1; font-size: 0.6rem; padding: 4px 4px; border: 1px solid var(--border);
+    flex: 1; font-size: 0.68rem; padding: 5px 6px; border: 1px solid var(--border);
     background: transparent; color: var(--muted); cursor: pointer; border-radius: 3px;
     font-family: 'DM Sans', sans-serif; letter-spacing: 0.02em; line-height: 1.3;
     transition: all 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%;
@@ -286,7 +286,6 @@
   .dash-src .s-bar > span { display: block; height: 100%; transition: width 0.4s ease; }
 
   @media (max-width: 900px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
     .dash-grid { grid-template-columns: 1fr; }
     header { padding: 20px 24px; }
     header h1 { font-size: 1.4rem; }
