@@ -49,7 +49,7 @@
   .meal-slot:last-child { border-bottom: none; }
   .meal-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; }
 
-  .meal-actions { display: flex; gap: 4px; }
+  .meal-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
   .swap-btn {
     font-size: 0.58rem; padding: 2px 6px; border: 1px solid var(--border);
     background: transparent; cursor: pointer; border-radius: 2px; color: var(--muted);
@@ -394,15 +394,6 @@
     <div class="week-label" id="weekInfo"></div>
   </div>
 
-  <div class="people-bar" id="peopleBar" style="display:none">
-    <span class="people-label">👥 Chi mangia</span>
-    <input id="name1" class="people-input" maxlength="22" placeholder="Persona 1" oninput="onNameChange()">
-    <input id="name2" class="people-input" maxlength="22" placeholder="Persona 2" oninput="onNameChange()">
-    <span class="people-hint">Spunta ogni pasto quando l'hai consumato</span>
-  </div>
-
-  <div class="dashboard" id="dashboard"></div>
-
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:var(--pesce)"></div>Pesce</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--legumi)"></div>Legumi</div>
@@ -421,6 +412,8 @@
       Clicca "Genera Piano" per creare il tuo piano settimanale personalizzato
     </div>
   </div>
+
+  <div class="dashboard" id="dashboard"></div>
 </div>
 
 <script>
@@ -974,39 +967,11 @@ function toggleDone(dayIdx, meal, who) {
 }
 
 function syncPeopleInputs() {
-  document.getElementById('name1').value = (currentPeople.p1 && currentPeople.p1 !== 'Persona 1') ? currentPeople.p1 : '';
-  const n2 = document.getElementById('name2');
-  if (PROFILE_TYPE === 'single') {
-    n2.style.display = 'none';
-  } else {
-    n2.style.display = '';
-    n2.value = (currentPeople.p2 && currentPeople.p2 !== 'Persona 2') ? currentPeople.p2 : '';
-  }
-  document.getElementById('peopleBar').style.display = currentPlan ? 'flex' : 'none';
+  // La barra "Chi mangia" è stata rimossa: i nomi sono ereditati dal profilo.
+  // Funzione mantenuta come no-op per compatibilità con le chiamate esistenti.
 }
 
-let nameSaveTimer = null;
-function onNameChange() {
-  currentPeople.p1 = document.getElementById('name1').value.trim() || 'Persona 1';
-  if (PROFILE_TYPE !== 'single')
-    currentPeople.p2 = document.getElementById('name2').value.trim() || 'Persona 2';
-  // aggiorna solo le etichette dei chip, senza ridisegnare tutto
-  document.querySelectorAll('.done-chip').forEach(chip => {
-    const who = chip.id.endsWith('-p1') ? 'p1' : 'p2';
-    const on = chip.classList.contains('on');
-    chip.textContent = (on ? '✓ ' : '') + currentPeople[who];
-  });
-  renderDashboard();
-  // salva (con un piccolo debounce per non scrivere a ogni tasto)
-  clearTimeout(nameSaveTimer);
-  nameSaveTimer = setTimeout(() => {
-    savePlan();
-    if (db && PROFILE_ID) {
-      const names = PROFILE_TYPE === 'single' ? [currentPeople.p1] : [currentPeople.p1, currentPeople.p2];
-      dbSet('profili/' + PROFILE_ID + '/names', names).catch(() => {});
-    }
-  }, 600);
-}
+function onNameChange() { /* rimosso: i nomi arrivano dal profilo */ }
 
 function swapContextHTML(dayIdx, meal) {
   const current = currentPlan[dayIdx][meal];
@@ -1192,19 +1157,26 @@ function openShopModal() {
 
 // Costruisce la lista della spesa in locale, dagli ingredienti dei piatti della settimana
 function buildShopList() {
-  const dishNames = [];
-  currentPlan.forEach(d => { dishNames.push(d.pranzo.name, d.cena.name); });
-  const uniqueDishes = [...new Set(dishNames)];
+  // raccogli i piatti escludendo i pasti "Stella" (fuori casa) in base alla FONTE,
+  // poi deduplica per nome
+  const seen = new Set();
+  const dishes = [];
+  currentPlan.forEach(d => [d.pranzo, d.cena].forEach(m => {
+    if (!m) return;
+    if (m.source === 'Stella') return;   // i pasti stella non entrano nella lista della spesa
+    if (seen.has(m.name)) return;
+    seen.add(m.name);
+    dishes.push(m);
+  }));
 
-  // categoria -> Map(nomeIngrediente -> {count, dishes:Set})
+  // categoria -> Map(nomeIngrediente -> {count})
   const byCat = {};
   const unknown = [];
-  uniqueDishes.forEach(name => {
-    const ing = INGREDIENTS[name];
+  dishes.forEach(m => {
+    const ing = INGREDIENTS[m.name];
     if (!ing) {
-      // piatto "fuori casa" (Stella) o personalizzato: lo segnaliamo a parte se non è Stella
-      const dish = currentPlan.flatMap(d => [d.pranzo, d.cena]).find(m => m.name === name);
-      if (dish && dish.source !== 'Stella') unknown.push(name);
+      // piatto personalizzato senza ingredienti noti (i pasti stella sono già esclusi sopra)
+      unknown.push(m.name);
       return;
     }
     ing.forEach(([item, cat]) => {
