@@ -6,6 +6,7 @@
 <title>Calendario · Piano Alimentare</title>
 
 <script src="firebase.js"></script>
+<script src="dishes.js"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
@@ -106,6 +107,9 @@
   .dish-rm { width: 28px; height: 28px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; border-radius: 4px; color: var(--muted); font-size: 0.85rem; line-height: 1; flex-shrink: 0; transition: all 0.15s; }
   .dish-rm:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
   .dishes-empty { color: var(--muted); font-style: italic; font-size: 0.85rem; padding: 14px 0; }
+  .d-count { font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+  .d-tag { font-style: normal; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; background: var(--accent2); color: #fff; padding: 1px 6px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+  .d-default { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 
   .fb-warning { background: #fff7ed; border: 1px solid var(--gold); color: #8a6d1f; padding: 14px 18px; font-size: 0.84rem; margin-bottom: 28px; line-height: 1.5; display: none; }
   .fb-warning code { background: rgba(0,0,0,0.06); padding: 1px 5px; }
@@ -180,7 +184,7 @@
 <div class="modal-bg" id="dishesModal">
   <div class="modal wide">
     <h2>🍽 I miei piatti</h2>
-    <p class="modal-subtitle">I piatti che hai aggiunto a questo profilo. Vengono proposti nella generazione e tra le alternative di "Cambia".</p>
+    <p class="modal-subtitle">Tutti i piatti usati per generare i piani: i predefiniti e quelli che hai aggiunto tu. I tuoi puoi rimuoverli; i predefiniti restano sempre disponibili.</p>
 
     <div class="dish-msg" id="dishMsg"></div>
     <div class="add-dish-row">
@@ -435,21 +439,24 @@ function closeDishesModal() { document.getElementById('dishesModal').classList.r
 
 function renderDishesList() {
   const el = document.getElementById('dishesList');
-  if (!customDishes.length) {
-    el.innerHTML = '<div class="dishes-empty">Non hai ancora aggiunto piatti personalizzati.</div>';
+  const base = (typeof BASE_DISHES !== 'undefined' ? BASE_DISHES : [])
+    .map(d => ({ name: d.name, source: d.source, custom: false }));
+  const mine = customDishes.map((d, i) => ({ name: d.name, source: d.source, custom: true, idx: i }));
+  const all = base.concat(mine);
+  if (!all.length) {
+    el.innerHTML = '<div class="dishes-empty">Nessun piatto disponibile.</div>';
     return;
   }
-  // raggruppa per fonte, nell'ordine standard
   let html = '';
   SRC_OPTIONS.forEach(src => {
-    const items = customDishes
-      .map((d, i) => ({ d, i }))
-      .filter(o => o.d.source === src);
+    const items = all.filter(o => o.source === src);
     if (!items.length) return;
-    html += `<div class="dishes-group-title">${esc(dishSrcLabel(src))}</div>`;
+    html += `<div class="dishes-group-title">${esc(dishSrcLabel(src))} <span class="d-count">${items.length}</span></div>`;
     html += items.map(o => `<div class="dish-item">
-      <span class="d-name">${esc(o.d.name)}</span>
-      <button class="dish-rm" title="Rimuovi dal database" onclick="removeDishFromCalendar(${o.i})">✕</button>
+      <span class="d-name">${esc(o.name)}${o.custom ? ' <em class="d-tag">tuo</em>' : ''}</span>
+      ${o.custom
+        ? `<button class="dish-rm" title="Rimuovi dal database" onclick="removeDishFromCalendar(${o.idx})">✕</button>`
+        : '<span class="d-default">predefinito</span>'}
     </div>`).join('');
   });
   el.innerHTML = html;
@@ -464,7 +471,9 @@ async function addDishFromCalendar() {
   const name = document.getElementById('calDishName').value.trim();
   const source = document.getElementById('calDishSource').value;
   if (!name) { dishMsg('Inserisci il nome del piatto.', false); return; }
-  const dup = customDishes.some(d => d.name.toLowerCase() === name.toLowerCase() && d.source === source);
+  const dupBase = (typeof BASE_DISHES !== 'undefined' ? BASE_DISHES : [])
+    .some(d => d.name.toLowerCase() === name.toLowerCase() && d.source === source);
+  const dup = dupBase || customDishes.some(d => d.name.toLowerCase() === name.toLowerCase() && d.source === source);
   if (dup) { dishMsg('Questo piatto esiste già per questa fonte.', false); return; }
   customDishes.push({ name: name, source: source });
   renderDishesList();
