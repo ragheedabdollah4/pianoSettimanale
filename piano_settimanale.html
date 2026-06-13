@@ -46,6 +46,19 @@
   .day-header { background: var(--ink); color: var(--bg); padding: 10px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; position: relative; }
   .day-swap { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: var(--bg); cursor: pointer; border-radius: 3px; font-size: 0.85rem; line-height: 1; transition: all 0.15s; }
   .day-swap:hover { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+  .day-sgarro { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; border-radius: 3px; font-size: 0.7rem; line-height: 1; transition: all 0.15s; }
+  .day-sgarro:hover { background: var(--gold); border-color: var(--gold); }
+  .sgarri-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; background: #fdf4e3; border-bottom: 1px solid var(--border); }
+  .sgarri-row:empty { display: none; }
+  .sgarro-chip { font-size: 1rem; line-height: 1; }
+  .sgarri-current { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .sgarro-rm { font-size: 0.95rem; padding: 6px 10px; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .sgarro-rm:hover { border-color: var(--accent); color: var(--accent); }
+  .no-sgarri { font-size: 0.85rem; color: var(--muted); font-style: italic; }
+  .sgarri-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 500; margin: 4px 0 10px; }
+  .sgarri-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sgarro-opt { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px solid var(--border); background: var(--bg); cursor: pointer; border-radius: 8px; transition: all 0.15s; }
+  .sgarro-opt:hover { border-color: var(--gold); background: #fffaf0; transform: translateY(-1px); }
 
   .meal-slot { padding: 12px; border-bottom: 1px solid var(--border); min-height: 120px; }
   .meal-slot:last-child { border-bottom: none; }
@@ -388,6 +401,20 @@
   </div>
 </div>
 
+<!-- Sgarri modal -->
+<div class="modal-bg" id="sgarriModal">
+  <div class="modal">
+    <h2>🍿 Sgarri del giorno</h2>
+    <p class="modal-subtitle" id="sgarriDayLabel"></p>
+    <div class="sgarri-current" id="sgarriCurrent"></div>
+    <div class="sgarri-label">Aggiungi uno sgarro</div>
+    <div class="sgarri-picker" id="sgarriPicker"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSgarriModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <div class="controls">
     <button class="btn btn-primary" onclick="generatePlan()">🎲 Genera Piano</button>
@@ -626,6 +653,7 @@ function savePlan() {
       day: d.day,
       pranzo: { name: d.pranzo.name, source: d.pranzo.source, done: normDone(d.pranzo.done) },
       cena:   { name: d.cena.name,   source: d.cena.source,   done: normDone(d.cena.done) },
+      sgarri: Array.isArray(d.sgarri) ? d.sgarri : [],
     })),
   };
   db ? dbSet('piani/' + PROFILE_ID + '/' + currentWeekId, payload)
@@ -651,11 +679,16 @@ async function loadSavedPlan() {
       ? { name: m.name, source: m.source, done: normDone(m.done) }
       : { name: '—', source: 'Insalate', done: { p1: false, p2: false } };
     return {
-      days: days.map((d, i) => ({
-        day: (d && d.day) || DAYS[i],
-        pranzo: mapMeal(d && d.pranzo),
-        cena:   mapMeal(d && d.cena),
-      })),
+      days: days.map((d, i) => {
+        let sg = d && d.sgarri;
+        if (sg && !Array.isArray(sg)) sg = Object.values(sg);
+        return {
+          day: (d && d.day) || DAYS[i],
+          pranzo: mapMeal(d && d.pranzo),
+          cena:   mapMeal(d && d.cena),
+          sgarri: Array.isArray(sg) ? sg : [],
+        };
+      }),
       people: data.people ? data.people : null,
     };
   } catch (err) {
@@ -755,7 +788,7 @@ function buildPlan() {
     used.add(pick.name);
     return { name: pick.name, source: pick.source, done: { p1: false, p2: false } };
   }
-  return slots.map((day, i) => ({ day: DAYS[i], pranzo: pickDish(day[0]), cena: pickDish(day[1]) }));
+  return slots.map((day, i) => ({ day: DAYS[i], pranzo: pickDish(day[0]), cena: pickDish(day[1]), sgarri: [] }));
 }
 
 // ─── RENDER ────────────────────────────────────────────────
@@ -767,7 +800,8 @@ function renderPlan(plan) {
     const col = document.createElement('div');
     col.className = 'day-col';
     col.innerHTML = `
-      <div class="day-header">${dayPlan.day}<button class="day-swap" onclick="swapDayMeals(${dayIdx})" title="Scambia pranzo e cena">⇅</button></div>
+      <div class="day-header">${dayPlan.day}<button class="day-sgarro" onclick="openSgarriModal(${dayIdx})" title="Sgarri del giorno">🍿</button><button class="day-swap" onclick="swapDayMeals(${dayIdx})" title="Scambia pranzo e cena">⇅</button></div>
+      <div class="sgarri-row" id="sgarri-${dayIdx}">${sgarriChipsHTML(dayPlan)}</div>
       <div class="meal-slot">
         <div class="meal-label">
           <span>☀ Pranzo</span>
@@ -806,6 +840,64 @@ function swapDayMeals(dayIdx) {
     if (c) c.classList.add('just-changed');
   });
   savePlan();
+}
+
+// ─── SGARRI (snack/cheat del giorno) ───────────────────────
+const SGARRI = ['🍿','🍟','🍕','🍔','🌭','🍫','🍦','🍰','🍩','🍪','🍬','🥤','🍺','🍷','🥨','🧁'];
+let sgarriTarget = null;
+
+function sgarriChipsHTML(day) {
+  const arr = (day && Array.isArray(day.sgarri)) ? day.sgarri : [];
+  return arr.map(e => `<span class="sgarro-chip">${escapeHtml(e)}</span>`).join('');
+}
+
+function updateDaySgarriStrip(dayIdx) {
+  const el = document.getElementById('sgarri-' + dayIdx);
+  if (el) el.innerHTML = sgarriChipsHTML(currentPlan[dayIdx]);
+}
+
+function openSgarriModal(dayIdx) {
+  if (!currentPlan || !currentPlan[dayIdx]) return;
+  sgarriTarget = dayIdx;
+  if (!Array.isArray(currentPlan[dayIdx].sgarri)) currentPlan[dayIdx].sgarri = [];
+  document.getElementById('sgarriDayLabel').textContent = currentPlan[dayIdx].day;
+  renderSgarriModal();
+  document.getElementById('sgarriModal').classList.add('active');
+}
+
+function renderSgarriModal() {
+  const day = currentPlan[sgarriTarget];
+  const cur = day.sgarri || [];
+  document.getElementById('sgarriCurrent').innerHTML = cur.length
+    ? cur.map((e, i) => `<button class="sgarro-rm" onclick="removeSgarro(${i})" title="Rimuovi">${escapeHtml(e)} ✕</button>`).join('')
+    : '<span class="no-sgarri">Nessuno sgarro per questo giorno.</span>';
+  document.getElementById('sgarriPicker').innerHTML =
+    SGARRI.map(e => `<button class="sgarro-opt" onclick="addSgarro('${e}')">${e}</button>`).join('');
+}
+
+function addSgarro(emoji) {
+  if (sgarriTarget === null) return;
+  const day = currentPlan[sgarriTarget];
+  if (!Array.isArray(day.sgarri)) day.sgarri = [];
+  day.sgarri.push(emoji);
+  renderSgarriModal();
+  updateDaySgarriStrip(sgarriTarget);
+  savePlan();
+}
+
+function removeSgarro(i) {
+  if (sgarriTarget === null) return;
+  const day = currentPlan[sgarriTarget];
+  if (!Array.isArray(day.sgarri)) return;
+  day.sgarri.splice(i, 1);
+  renderSgarriModal();
+  updateDaySgarriStrip(sgarriTarget);
+  savePlan();
+}
+
+function closeSgarriModal() {
+  document.getElementById('sgarriModal').classList.remove('active');
+  sgarriTarget = null;
 }
 
 function escapeHtml(s) {
@@ -1304,13 +1396,14 @@ function sendEmail() {
 }
 
 // close modals on backdrop click
-['emailModal','swapModal','aiModal','shopModal'].forEach(id => {
+['emailModal','swapModal','aiModal','shopModal','sgarriModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target === document.getElementById(id)) {
       if (id === 'emailModal') closeEmailModal();
       if (id === 'swapModal') closeSwapModal();
       if (id === 'aiModal') closeAiModal();
       if (id === 'shopModal') closeShopModal();
+      if (id === 'sgarriModal') closeSgarriModal();
     }
   });
 });
