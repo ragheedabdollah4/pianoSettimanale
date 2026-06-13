@@ -180,6 +180,9 @@
   .alt-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; background: var(--surface); }
   .alt-item:hover { border-color: var(--ink); background: var(--bg); }
   .alt-item.selected { border-color: var(--accent2); background: #f0f7f2; }
+  .alt-item.disabled { opacity: 0.5; cursor: default; }
+  .alt-item.disabled:hover { border-color: var(--border); background: var(--surface); }
+  .copy-ava { width: 34px; height: 34px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #fff; flex-shrink: 0; }
   .alt-item-name { font-size: 0.85rem; font-weight: 500; }
   .alt-item-src { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
   .check-icon { font-size: 1rem; opacity: 0; }
@@ -457,9 +460,22 @@
   </div>
 </div>
 
+<!-- Copia piano da un altro profilo -->
+<div class="modal-bg" id="copyModal">
+  <div class="modal">
+    <h2>📋 Copia un piano</h2>
+    <p class="modal-subtitle" id="copySubtitle">Copia il piano di un altro profilo per questa settimana.</p>
+    <div class="alternatives-list" id="copyProfilesList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeCopyModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <div class="controls">
     <button class="btn btn-primary" onclick="generatePlan()">🎲 Genera Piano</button>
+    <button class="btn btn-secondary" id="btnCopy" onclick="openCopyModal()" style="display:none">📋 Copia da un profilo</button>
     <button class="btn btn-shop" onclick="openShopModal()" id="btnShop" disabled>🛒 Lista della spesa</button>
     <button class="btn btn-secondary" onclick="openAddDishModal()">➕ Aggiungi piatto</button>
     <button class="btn btn-email" onclick="openEmailModal()" id="btnEmail" disabled>📧 Invia via Email</button>
@@ -1005,6 +1021,81 @@ function removeCustomDish(i) {
   renderCustomDishesList();
 }
 
+// ─── COPIA PIANO DA UN ALTRO PROFILO ───────────────────────
+let copyCandidates = [];
+
+async function openCopyModal() {
+  document.getElementById('copySubtitle').textContent =
+    'Copia il piano di un altro profilo per la settimana del ' + currentWeekLabel + '.';
+  document.getElementById('copyModal').classList.add('active');
+  const listEl = document.getElementById('copyProfilesList');
+  listEl.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><span>Cerco i piani degli altri profili…</span></div>';
+  copyCandidates = [];
+  if (!db) { listEl.innerHTML = '<p class="no-alts">Firebase non configurato.</p>'; return; }
+  try {
+    const profs = (await dbGet('profili')) || {};
+    const ids = Object.keys(profs).filter(id => id !== PROFILE_ID);
+    if (!ids.length) { listEl.innerHTML = '<p class="no-alts">Non ci sono altri profili da cui copiare.</p>'; return; }
+    copyCandidates = await Promise.all(ids.map(id =>
+      dbGet('piani/' + id + '/' + currentWeekId).then(
+        plan => ({ id: id, profile: profs[id], plan: plan }),
+        () => ({ id: id, profile: profs[id], plan: null })
+      )
+    ));
+    renderCopyList();
+  } catch (e) {
+    listEl.innerHTML = '<p class="no-alts">Errore nel caricamento: ' + escapeHtml(e.message || String(e)) + '</p>';
+  }
+}
+
+function renderCopyList() {
+  const listEl = document.getElementById('copyProfilesList');
+  listEl.innerHTML = copyCandidates.map((c, i) => {
+    const p = c.profile || {};
+    let names = p.names; if (names && !Array.isArray(names)) names = Object.values(names);
+    names = (names || ['Profilo']).join(' & ');
+    let days = c.plan && c.plan.days;
+    if (days && !Array.isArray(days)) days = Object.values(days);
+    const has = !!(days && days.length);
+    return `<div class="alt-item ${has ? '' : 'disabled'}" ${has ? `onclick="applyCopy(${i})"` : ''}>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span class="copy-ava" style="background:${p.color || '#999'}">${escapeHtml(p.emoji || '🙂')}</span>
+        <div style="min-width:0">
+          <div class="alt-item-name">${escapeHtml(names)}</div>
+          <div class="alt-item-src">${has ? 'Ha un piano questa settimana — tocca per copiarlo' : 'Nessun piano questa settimana'}</div>
+        </div>
+      </div>
+      ${has ? '<span class="check-icon" style="opacity:1">→</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function applyCopy(i) {
+  const c = copyCandidates[i];
+  if (!c || !c.plan) return;
+  let days = c.plan.days;
+  if (days && !Array.isArray(days)) days = Object.values(days);
+  if (!Array.isArray(days) || !days.length) return;
+  const mapMeal = m => m
+    ? { name: m.name, source: m.source, done: { p1: false, p2: false } }
+    : { name: '—', source: 'Insalate', done: { p1: false, p2: false } };
+  // copia i pasti; lo stato "fatto" e gli sgarri ripartono da zero per questo profilo
+  currentPlan = days.map((d, idx) => ({
+    day: (d && d.day) || DAYS[idx],
+    pranzo: mapMeal(d && d.pranzo),
+    cena: mapMeal(d && d.cena),
+    sgarri: [],
+  }));
+  renderPlan(currentPlan);
+  document.getElementById('btnEmail').disabled = false;
+  document.getElementById('btnShop').disabled = false;
+  closeCopyModal();
+  savePlan();
+  showSaveStatus('📋 Piano copiato');
+}
+
+function closeCopyModal() { document.getElementById('copyModal').classList.remove('active'); }
+
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1513,7 +1604,7 @@ function sendEmail() {
 }
 
 // close modals on backdrop click
-['emailModal','swapModal','aiModal','shopModal','sgarriModal','addDishModal'].forEach(id => {
+['emailModal','swapModal','aiModal','shopModal','sgarriModal','addDishModal','copyModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target === document.getElementById(id)) {
       if (id === 'emailModal') closeEmailModal();
@@ -1522,6 +1613,7 @@ function sendEmail() {
       if (id === 'shopModal') closeShopModal();
       if (id === 'sgarriModal') closeSgarriModal();
       if (id === 'addDishModal') closeAddDishModal();
+      if (id === 'copyModal') closeCopyModal();
     }
   });
 });
@@ -1566,6 +1658,13 @@ function showGridMessage(html) {
           .map(x => ({ name: x.name, source: x.source }));
         rebuildDishes();
       }
+    } catch (e) { /* best effort */ }
+
+    // mostra "Copia da un profilo" solo se esistono altri profili
+    try {
+      const allP = await dbGet('profili');
+      const others = allP ? Object.keys(allP).filter(id => id !== PROFILE_ID).length : 0;
+      if (others > 0) document.getElementById('btnCopy').style.display = '';
     } catch (e) { /* best effort */ }
   }
 

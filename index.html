@@ -87,6 +87,25 @@
   .btn-danger:hover { background: #a8411d; }
   .btn-secondary { background: var(--ink); color: var(--bg); }
   .btn-secondary:hover { background: #333; }
+  .modal-subtitle { color: var(--muted); font-size: 0.82rem; margin-bottom: 18px; }
+  .modal.wide { width: 540px; max-height: 88vh; overflow-y: auto; }
+
+  .add-dish-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .add-dish-row input { flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; }
+  .add-dish-row select { padding: 11px 12px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; outline: none; }
+  .add-dish-row input:focus, .add-dish-row select:focus { border-color: var(--accent); }
+  .add-dish-btn { padding: 11px 16px; background: var(--accent); color: #fff; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+  .add-dish-btn:hover { background: #a8411d; }
+  .dish-msg { font-size: 0.8rem; margin-bottom: 12px; display: none; }
+  .dish-msg.error { color: #c00; }
+  .dish-msg.ok { color: var(--accent2); }
+
+  .dishes-group-title { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; margin: 16px 0 8px; }
+  .dish-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--border); background: var(--surface); margin-bottom: 6px; font-size: 0.88rem; }
+  .dish-item .d-name { font-weight: 500; }
+  .dish-rm { width: 28px; height: 28px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; border-radius: 4px; color: var(--muted); font-size: 0.85rem; line-height: 1; flex-shrink: 0; transition: all 0.15s; }
+  .dish-rm:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dishes-empty { color: var(--muted); font-style: italic; font-size: 0.85rem; padding: 14px 0; }
 
   .fb-warning { background: #fff7ed; border: 1px solid var(--gold); color: #8a6d1f; padding: 14px 18px; font-size: 0.84rem; margin-bottom: 28px; line-height: 1.5; display: none; }
   .fb-warning code { background: rgba(0,0,0,0.06); padding: 1px 5px; }
@@ -118,6 +137,7 @@
   </div>
   <div class="header-actions">
     <a class="btn btn-ghost" href="profili.html">↩ Cambia profilo</a>
+    <button class="btn btn-ghost" onclick="openDishesModal()">🍽 I miei piatti</button>
     <button class="btn btn-ghost" onclick="fbSignOut()">Esci</button>
     <button class="btn btn-primary" onclick="goToCurrentWeek()">→ Settimana corrente</button>
   </div>
@@ -152,6 +172,37 @@
     <div class="modal-actions">
       <button class="btn btn-danger" id="confirmDelBtn" onclick="confirmDelete()">Elimina</button>
       <button class="btn btn-secondary" onclick="closeConfirm()">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale gestione piatti -->
+<div class="modal-bg" id="dishesModal">
+  <div class="modal wide">
+    <h2>🍽 I miei piatti</h2>
+    <p class="modal-subtitle">I piatti che hai aggiunto a questo profilo. Vengono proposti nella generazione e tra le alternative di "Cambia".</p>
+
+    <div class="dish-msg" id="dishMsg"></div>
+    <div class="add-dish-row">
+      <input type="text" id="calDishName" placeholder="Nome nuovo piatto" maxlength="60">
+      <select id="calDishSource">
+        <option value="Pesce">Pesce</option>
+        <option value="Legumi">Legumi</option>
+        <option value="Carne Bianca">Carne Bianca</option>
+        <option value="Carne Rossa">Carne Rossa</option>
+        <option value="Latticini">Latticini</option>
+        <option value="Uova">Uova</option>
+        <option value="Affettati Magri">Affettati</option>
+        <option value="Stella">⭐ Stella</option>
+        <option value="Insalate">Insalate</option>
+      </select>
+      <button class="add-dish-btn" onclick="addDishFromCalendar()">Aggiungi</button>
+    </div>
+
+    <div id="dishesList"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeDishesModal()">Chiudi</button>
     </div>
   </div>
 </div>
@@ -349,6 +400,92 @@ async function confirmDelete() {
 // chiudi la modale cliccando sullo sfondo
 document.getElementById('confirmModal').addEventListener('click', e => {
   if (e.target.id === 'confirmModal') closeConfirm();
+});
+
+// ─── GESTIONE PIATTI (I miei piatti) ───────────────────────
+const SRC_OPTIONS = ['Pesce','Legumi','Carne Bianca','Carne Rossa','Latticini','Uova','Affettati Magri','Stella','Insalate'];
+function dishSrcLabel(src) {
+  if (src === 'Affettati Magri') return 'Affettati';
+  if (src === 'Stella') return '⭐ Stella';
+  return src;
+}
+let customDishes = [];
+
+function dishMsg(text, ok) {
+  const el = document.getElementById('dishMsg');
+  el.textContent = text;
+  el.className = 'dish-msg ' + (ok ? 'ok' : 'error');
+  el.style.display = text ? 'block' : 'none';
+}
+
+async function openDishesModal() {
+  document.getElementById('dishesModal').classList.add('active');
+  dishMsg('', true);
+  document.getElementById('calDishName').value = '';
+  document.getElementById('dishesList').innerHTML = '<div class="dishes-empty">Caricamento…</div>';
+  if (!db || !PROFILE_ID) { customDishes = []; renderDishesList(); return; }
+  try {
+    const cd = await dbGet('piatti/' + PROFILE_ID);
+    let arr = cd ? (Array.isArray(cd) ? cd : Object.values(cd)) : [];
+    customDishes = (arr || []).filter(x => x && x.name && x.source).map(x => ({ name: x.name, source: x.source }));
+  } catch (e) { customDishes = []; }
+  renderDishesList();
+}
+function closeDishesModal() { document.getElementById('dishesModal').classList.remove('active'); }
+
+function renderDishesList() {
+  const el = document.getElementById('dishesList');
+  if (!customDishes.length) {
+    el.innerHTML = '<div class="dishes-empty">Non hai ancora aggiunto piatti personalizzati.</div>';
+    return;
+  }
+  // raggruppa per fonte, nell'ordine standard
+  let html = '';
+  SRC_OPTIONS.forEach(src => {
+    const items = customDishes
+      .map((d, i) => ({ d, i }))
+      .filter(o => o.d.source === src);
+    if (!items.length) return;
+    html += `<div class="dishes-group-title">${esc(dishSrcLabel(src))}</div>`;
+    html += items.map(o => `<div class="dish-item">
+      <span class="d-name">${esc(o.d.name)}</span>
+      <button class="dish-rm" title="Rimuovi dal database" onclick="removeDishFromCalendar(${o.i})">✕</button>
+    </div>`).join('');
+  });
+  el.innerHTML = html;
+}
+
+function saveCustomDishes() {
+  if (db && PROFILE_ID) return dbSet('piatti/' + PROFILE_ID, customDishes);
+  return Promise.resolve();
+}
+
+async function addDishFromCalendar() {
+  const name = document.getElementById('calDishName').value.trim();
+  const source = document.getElementById('calDishSource').value;
+  if (!name) { dishMsg('Inserisci il nome del piatto.', false); return; }
+  const dup = customDishes.some(d => d.name.toLowerCase() === name.toLowerCase() && d.source === source);
+  if (dup) { dishMsg('Questo piatto esiste già per questa fonte.', false); return; }
+  customDishes.push({ name: name, source: source });
+  renderDishesList();
+  document.getElementById('calDishName').value = '';
+  document.getElementById('calDishName').focus();
+  try { await saveCustomDishes(); dishMsg('✓ "' + name + '" aggiunto.', true); }
+  catch (e) { dishMsg('Errore nel salvataggio: ' + (e.message || e), false); }
+}
+
+async function removeDishFromCalendar(i) {
+  const d = customDishes[i];
+  if (!d) return;
+  if (!confirm('Rimuovere "' + d.name + '" dai tuoi piatti?')) return;
+  customDishes.splice(i, 1);
+  renderDishesList();
+  try { await saveCustomDishes(); dishMsg('Piatto rimosso.', true); }
+  catch (e) { dishMsg('Errore nella rimozione: ' + (e.message || e), false); }
+}
+
+document.getElementById('dishesModal').addEventListener('click', e => {
+  if (e.target.id === 'dishesModal') closeDishesModal();
 });
 
 function countSources(saved) {
