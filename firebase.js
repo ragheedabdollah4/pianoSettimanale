@@ -75,15 +75,30 @@ function _redirectLogin() {
 }
 
 /* ─── Helper DB con autenticazione ───────────────────────── */
-function _authedFetch(path, opts) {
+function _authedFetch(path, opts, _retried) {
   return _validToken().then(function (tok) {
     var url = DB_URL + '/' + path + '.json?auth=' + tok;
     return fetch(url, opts || {}).then(function (res) {
-      if (res.status === 401 || res.status === 403) { _redirectLogin(); throw new Error('Sessione scaduta o accesso negato'); }
+      if (res.status === 401 && !_retried) {
+        // token forse scaduto: rinnova e riprova UNA sola volta
+        return _refreshToken().then(
+          function () { return _authedFetch(path, opts, true); },
+          function () { _redirectLogin(); throw new Error('Sessione scaduta'); }
+        );
+      }
+      if (res.status === 401 || res.status === 403) {
+        // sei loggato ma le REGOLE negano l'accesso: non tornare al login (eviti il loop)
+        throw new Error('Permesso negato dalle Regole del database (HTTP ' + res.status +
+          '). Controlla che le Regole del Realtime Database consentano questo account.');
+      }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res;
     });
-  }, function () { _redirectLogin(); throw new Error('Non autenticato'); });
+  }, function () {
+    // nessun token o rinnovo fallito → davvero non autenticato
+    _redirectLogin();
+    throw new Error('Non autenticato');
+  });
 }
 
 function dbGet(path) {
