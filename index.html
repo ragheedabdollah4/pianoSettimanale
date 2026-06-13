@@ -6,12 +6,10 @@
 <title>Calendario · Piano Alimentare</title>
 
 <!-- ════════════════════════════════════════════════════════════
-     FIREBASE — Realtime Database
-     ⬇⬇⬇  SOSTITUISCI QUI con la TUA config (DEVE essere identica
-     a quella in piano_settimanale.html)
+     FIREBASE — Realtime Database via API REST (nessun SDK)
+     Compatibile con qualsiasi browser, anche vecchi (iPad mini 2 / iOS 12).
+     ⬇⬇⬇  La stessa config è in profili.html e piano_settimanale.html
 ════════════════════════════════════════════════════════════ -->
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
@@ -23,12 +21,14 @@
     appId: "1:479375847867:web:4178c4657379b17343d49e"
   };
 
-  let db = null;
-  try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-  } catch (e) {
-    console.error("Firebase non inizializzato:", e);
+  var DB_URL = (firebaseConfig.databaseURL || '').replace(/\/+$/, '');
+  var db = (DB_URL && DB_URL.indexOf('il-tuo-progetto') === -1) ? DB_URL : null;
+
+  function dbGet(path) {
+    return fetch(DB_URL + '/' + path + '.json').then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
   }
 </script>
 
@@ -42,13 +42,21 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
 
-  header { background: var(--ink); color: var(--bg); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  header { background: var(--ink); color: var(--bg); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .header-left { display: flex; align-items: center; gap: 16px; }
   header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
-  header span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); font-weight: 500; }
+  header .sub { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); font-weight: 500; }
+  .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  /* Profile chip in header */
+  .profile-chip { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); }
+  .profile-chip .avatar { width: 38px; height: 38px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: white; flex-shrink: 0; }
+  .profile-chip .names { font-size: 0.92rem; font-weight: 500; color: var(--bg); line-height: 1.1; }
+  .profile-chip .meta { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); }
 
   .container { max-width: 920px; margin: 0 auto; padding: 40px 32px; }
 
-  .btn { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 12px 24px; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.2s; }
+  .btn { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 12px 24px; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.2s; text-decoration: none; display: inline-block; }
   .btn-primary { background: var(--accent); color: white; }
   .btn-primary:hover { background: #a8411d; }
   .btn-ghost { background: transparent; color: var(--bg); border: 1px solid rgba(255,255,255,0.4); }
@@ -98,18 +106,30 @@
 <body>
 
 <header>
-  <div>
-    <h1>📅 Calendario Pasti</h1>
-    <span>Scegli una settimana</span>
+  <div class="header-left">
+    <div>
+      <h1>📅 Calendario Pasti</h1>
+      <span class="sub">Scegli una settimana</span>
+    </div>
+    <div class="profile-chip" id="profileChip" style="display:none">
+      <div class="avatar" id="profileAvatar"></div>
+      <div>
+        <div class="names" id="profileNames"></div>
+        <div class="meta" id="profileMeta"></div>
+      </div>
+    </div>
   </div>
-  <button class="btn btn-primary" onclick="goToCurrentWeek()">→ Settimana corrente</button>
+  <div class="header-actions">
+    <a class="btn btn-ghost" href="profili.html">↩ Cambia profilo</a>
+    <button class="btn btn-primary" onclick="goToCurrentWeek()">→ Settimana corrente</button>
+  </div>
 </header>
 
 <div class="container">
 
   <div class="fb-warning" id="fbWarning">
     ⚠ Firebase non è configurato: i piani non possono essere salvati né caricati.
-    Apri questo file e <code>piano_settimanale.html</code> e incolla la tua <code>firebaseConfig</code> nel blocco in cima.
+    Incolla la tua <code>firebaseConfig</code> in cima a tutti e tre i file.
   </div>
 
   <div class="month-nav">
@@ -121,15 +141,25 @@
   <p class="section-title">Settimane di questo mese</p>
   <div class="week-list" id="weekList"></div>
 
-  <p class="section-title">I tuoi piani salvati</p>
+  <p class="section-title">I piani salvati di questo profilo</p>
   <div class="week-list" id="savedList"></div>
 
 </div>
 
 <script>
 const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
-let viewDate = new Date();          // mese visualizzato
-let savedPlans = {};                // mappa weekId -> dati piano (da Firebase)
+const COLORS = ["#c8522a","#4a7c59","#3b82c4","#8b6bb1","#d4a843","#e85d75","#6b7c8d","#3a6347"];
+
+// ─── PROFILO (da ?profile=... nell'URL) ────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const PROFILE_ID = urlParams.get('profile');
+if (!PROFILE_ID) { window.location.replace('profili.html'); }
+
+let viewDate = new Date();
+let savedPlans = {};
+let profile = null;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ─── DATE / WEEK HELPERS ───────────────────────────────────
 function getMondayOf(date) {
@@ -163,12 +193,11 @@ function mondayFromWeekId(weekId) {
 }
 
 // ─── NAVIGATION ────────────────────────────────────────────
-function openWeek(weekId) {
-  window.location.href = `piano_settimanale.html?week=${weekId}`;
+function weekUrl(weekId) {
+  return `piano_settimanale.html?profile=${encodeURIComponent(PROFILE_ID)}&week=${weekId}`;
 }
-function goToCurrentWeek() {
-  openWeek(getWeekId(new Date()));
-}
+function openWeek(weekId) { window.location.href = weekUrl(weekId); }
+function goToCurrentWeek() { openWeek(getWeekId(new Date())); }
 function changeMonth(delta) {
   viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1);
   renderMonth();
@@ -183,7 +212,6 @@ function renderMonth() {
   const lastOfMonth  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
   const todayWeekId  = getWeekId(new Date());
 
-  // tutti i lunedì le cui settimane toccano il mese
   const weeks = [];
   let cursor = getMondayOf(firstOfMonth);
   while (cursor <= lastOfMonth) {
@@ -204,15 +232,14 @@ function renderMonth() {
 function weekRow(weekId, monday, saved, isNow) {
   const a = document.createElement('a');
   a.className = 'week-row' + (isNow ? ' current' : '');
-  a.href = `piano_settimanale.html?week=${weekId}`;
+  a.href = weekUrl(weekId);
 
   let badge;
   if (isNow) badge = `<span class="badge now">Questa settimana</span>`;
   else if (saved) badge = `<span class="badge saved">✓ Salvato</span>`;
   else badge = `<span class="badge empty">Vuoto</span>`;
 
-  const preview = saved
-    ? `<div class="saved-preview">${countSources(saved)}</div>` : '';
+  const preview = saved ? `<div class="saved-preview">${countSources(saved)}</div>` : '';
 
   a.innerHTML = `
     <div class="week-main">
@@ -226,9 +253,11 @@ function weekRow(weekId, monday, saved, isNow) {
 }
 
 function countSources(saved) {
-  if (!saved.days) return 'Piano salvato';
+  let days = saved.days;
+  if (days && !Array.isArray(days)) days = Object.values(days);
+  if (!days) return 'Piano salvato';
   const counts = {};
-  saved.days.forEach(d => [d.pranzo, d.cena].forEach(x => {
+  days.forEach(d => [d && d.pranzo, d && d.cena].forEach(x => {
     if (x && x.source) counts[x.source] = (counts[x.source] || 0) + 1;
   }));
   return Object.entries(counts).map(([s, n]) => `${s} ${n}×`).join(' · ');
@@ -237,9 +266,9 @@ function countSources(saved) {
 // ─── RENDER SAVED LIST ─────────────────────────────────────
 function renderSaved() {
   const el = document.getElementById('savedList');
-  const ids = Object.keys(savedPlans).sort().reverse(); // più recenti in alto
+  const ids = Object.keys(savedPlans).sort().reverse();
   if (!ids.length) {
-    el.innerHTML = `<div class="empty-state">Nessun piano salvato finora.<br>Apri una settimana qui sopra e genera il tuo primo piano.</div>`;
+    el.innerHTML = `<div class="empty-state">Nessun piano salvato per questo profilo.<br>Apri una settimana qui sopra e genera il primo piano.</div>`;
     return;
   }
   el.innerHTML = '';
@@ -250,16 +279,38 @@ function renderSaved() {
   });
 }
 
-// ─── INIT: leggi i piani salvati da Firebase ───────────────
+// ─── PROFILE HEADER ────────────────────────────────────────
+function renderProfileChip() {
+  if (!profile) return;
+  let names = profile.names;
+  if (names && !Array.isArray(names)) names = Object.values(names);
+  names = names || ['Profilo'];
+  const color = profile.color || COLORS[0];
+  document.getElementById('profileAvatar').textContent = profile.emoji || '🙂';
+  document.getElementById('profileAvatar').style.background = color;
+  document.getElementById('profileNames').textContent = names.join(' & ');
+  document.getElementById('profileMeta').textContent = profile.type === 'couple' ? 'Coppia' : 'Singolo';
+  document.getElementById('profileChip').style.display = 'flex';
+}
+
+// ─── INIT ──────────────────────────────────────────────────
 (async () => {
+  if (!PROFILE_ID) return; // sta già reindirizzando a profili.html
   if (!db) {
     document.getElementById('fbWarning').style.display = 'block';
     renderMonth(); renderSaved();
     return;
   }
   try {
-    const snap = await db.ref('piani').get();
-    savedPlans = snap.exists() ? (snap.val() || {}) : {};
+    profile = await dbGet('profili/' + PROFILE_ID);
+    if (!profile) { window.location.replace('profili.html'); return; }
+    renderProfileChip();
+  } catch (e) {
+    console.error('Errore profilo:', e);
+  }
+  try {
+    const data = await dbGet('piani/' + PROFILE_ID);
+    savedPlans = data || {};
   } catch (e) {
     console.error('Errore lettura piani:', e);
     document.getElementById('fbWarning').style.display = 'block';

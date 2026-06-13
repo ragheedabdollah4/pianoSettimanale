@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profili · Piano Alimentare</title>
+
+<!-- ════════════════════════════════════════════════════════════
+     FIREBASE — Realtime Database via API REST (nessun SDK)
+     Compatibile con qualsiasi browser, anche vecchi (iPad mini 2 / iOS 12).
+     ⬇⬇⬇  La stessa config è in index.html e piano_settimanale.html
+════════════════════════════════════════════════════════════ -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
+    authDomain: "pianosettimanaledb.firebaseapp.com",
+    databaseURL: "https://pianosettimanaledb-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "pianosettimanaledb",
+    storageBucket: "pianosettimanaledb.firebasestorage.app",
+    messagingSenderId: "479375847867",
+    appId: "1:479375847867:web:4178c4657379b17343d49e"
+  };
+
+  var DB_URL = (firebaseConfig.databaseURL || '').replace(/\/+$/, '');
+  var db = (DB_URL && DB_URL.indexOf('il-tuo-progetto') === -1) ? DB_URL : null;
+
+  function dbGet(path) {
+    return fetch(DB_URL + '/' + path + '.json').then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+  function dbSet(path, value) {
+    return fetch(DB_URL + '/' + path + '.json', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(value)
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+  function dbDelete(path) {
+    return fetch(DB_URL + '/' + path + '.json', { method: 'DELETE' })
+      .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return true; });
+  }
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #faf7f2; --surface: #ffffff; --ink: #1a1208; --muted: #7a6e5f;
+    --accent: #c8522a; --accent2: #4a7c59; --gold: #d4a843; --border: #e8e0d4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  header { background: var(--ink); color: var(--bg); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
+  header span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); font-weight: 500; }
+
+  .btn { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 12px 24px; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #a8411d; }
+  .btn-secondary { background: var(--ink); color: var(--bg); }
+  .btn-secondary:hover { background: #333; }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--ink); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .screen { min-height: calc(100vh - 96px); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 56px 24px; }
+  .screen-title { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 700; margin-bottom: 8px; text-align: center; }
+  .screen-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 48px; text-align: center; }
+
+  .profiles-grid { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; max-width: 760px; min-height: 160px; }
+  .profile-tile { display: flex; flex-direction: column; align-items: center; gap: 14px; cursor: pointer; position: relative; transition: transform 0.2s; width: 140px; }
+  .profile-tile:hover { transform: translateY(-4px); }
+  .profile-avatar {
+    width: 120px; height: 120px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; color: white; border: 3px solid transparent; transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .profile-tile:hover .profile-avatar { border-color: var(--gold); box-shadow: 0 6px 22px rgba(0,0,0,0.16); }
+  .profile-name { font-size: 1rem; font-weight: 500; color: var(--ink); text-align: center; line-height: 1.3; }
+  .profile-type { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-top: -8px; }
+
+  .profile-tile.add .profile-avatar { background: transparent; border: 3px dashed var(--border); color: var(--muted); }
+  .profile-tile.add:hover .profile-avatar { border-color: var(--accent); color: var(--accent); }
+
+  .profile-delete {
+    position: absolute; top: -8px; right: 14px; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: white; border: 2px solid var(--bg); cursor: pointer; font-size: 0.9rem;
+    line-height: 1; display: none; align-items: center; justify-content: center; z-index: 2;
+  }
+  .profiles-grid.managing .profile-tile:not(.add) .profile-delete { display: flex; }
+
+  .manage-toggle { margin-top: 44px; }
+  .loading-note { color: var(--muted); font-size: 0.9rem; font-style: italic; }
+
+  .fb-warning { background: #fff7ed; border: 1px solid var(--gold); color: #8a6d1f; padding: 14px 18px; font-size: 0.84rem; margin: 0 auto 28px; max-width: 620px; line-height: 1.5; display: none; }
+  .fb-warning code { background: rgba(0,0,0,0.06); padding: 1px 5px; }
+
+  /* Modal */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(26,18,8,0.6); z-index: 200; align-items: center; justify-content: center; }
+  .modal-bg.active { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); padding: 36px 40px; width: 500px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 4px; }
+  .modal-subtitle { color: var(--muted); font-size: 0.82rem; margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  .form-group input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus { border-color: var(--accent); }
+
+  .type-toggle { display: flex; margin-bottom: 20px; border: 1px solid var(--border); }
+  .type-toggle button { flex: 1; padding: 12px; background: var(--surface); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); transition: all 0.15s; }
+  .type-toggle button.active { background: var(--ink); color: var(--bg); }
+
+  .emoji-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+  .emoji-opt { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid var(--border); background: var(--bg); cursor: pointer; border-radius: 6px; transition: all 0.15s; }
+  .emoji-opt:hover { border-color: var(--accent); }
+  .emoji-opt.selected { border-color: var(--accent2); border-width: 2px; background: #f0f7f2; }
+
+  .error-msg { background: #fee; border: 1px solid #fcc; color: #c00; padding: 12px; font-size: 0.82rem; margin-bottom: 16px; display: none; }
+
+  @media (max-width: 700px) {
+    header { padding: 22px 22px; }
+    header h1 { font-size: 1.5rem; }
+    .screen-title { font-size: 1.8rem; }
+    .profile-avatar { width: 96px; height: 96px; font-size: 2.4rem; }
+    .profile-tile { width: 110px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🍽 Piano Alimentare</h1>
+    <span>Scegli un profilo</span>
+  </div>
+</header>
+
+<!-- Add profile modal -->
+<div class="modal-bg" id="addProfileModal">
+  <div class="modal">
+    <h2>Nuovo profilo</h2>
+    <p class="modal-subtitle">Crea un profilo per una persona o per una coppia.</p>
+    <div class="error-msg" id="profileError"></div>
+
+    <div class="type-toggle" id="typeToggle">
+      <button data-type="single" class="active" onclick="setProfileType('single')">Singolo</button>
+      <button data-type="couple" onclick="setProfileType('couple')">Coppia</button>
+    </div>
+
+    <div id="nameFields">
+      <div class="form-group">
+        <label>Nome</label>
+        <input type="text" id="name1Input" placeholder="es. Anna" maxlength="20">
+      </div>
+      <div class="form-group" id="name2Group" style="display:none">
+        <label>Secondo nome</label>
+        <input type="text" id="name2Input" placeholder="es. Marco" maxlength="20">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Avatar</label>
+      <div class="emoji-picker" id="emojiPicker"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="createProfile()">Crea profilo</button>
+      <button class="btn btn-secondary" onclick="closeAddProfile()">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <h2 class="screen-title">Chi mangia questa settimana?</h2>
+  <p class="screen-sub">Scegli un profilo per aprire il suo calendario dei pasti</p>
+
+  <div class="fb-warning" id="fbWarning">
+    ⚠ Firebase non è configurato: i profili non possono essere salvati né caricati.
+    Incolla la tua <code>firebaseConfig</code> in cima a tutti e tre i file.
+  </div>
+
+  <div class="profiles-grid" id="profilesGrid">
+    <div class="loading-note">Caricamento profili…</div>
+  </div>
+
+  <button class="btn btn-ghost manage-toggle" id="manageToggle" onclick="toggleManage()" style="display:none">Gestisci profili</button>
+</div>
+
+<script>
+const AVATAR_EMOJIS = ["🙂","😎","🦊","🐼","🌸","🍳","🐙","🥑","🍅","⭐","🐯","🍋"];
+const COLORS = ["#c8522a","#4a7c59","#3b82c4","#8b6bb1","#d4a843","#e85d75","#6b7c8d","#3a6347"];
+
+let profiles = [];          // [{id, type, names, emoji, color, createdAt}]
+let newProfileType = 'single';
+let newProfileEmoji = AVATAR_EMOJIS[0];
+let managing = false;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function profileLabel(p){ return (p.names || []).join(' & '); }
+
+// ─── LOAD ──────────────────────────────────────────────────
+async function loadProfiles() {
+  if (!db) {
+    document.getElementById('fbWarning').style.display = 'block';
+    profiles = [];
+    renderProfiles();
+    return;
+  }
+  try {
+    const data = await dbGet('profili');
+    profiles = [];
+    if (data) {
+      Object.keys(data).forEach(id => {
+        const p = data[id] || {};
+        let names = p.names;
+        if (names && !Array.isArray(names)) names = Object.values(names);
+        profiles.push({
+          id,
+          type: p.type || ((names && names.length > 1) ? 'couple' : 'single'),
+          names: names || ['Profilo'],
+          emoji: p.emoji || '🙂',
+          color: p.color || COLORS[0],
+          createdAt: p.createdAt || 0,
+        });
+      });
+      profiles.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    }
+  } catch (e) {
+    console.error('Errore lettura profili:', e);
+    document.getElementById('fbWarning').style.display = 'block';
+  }
+  renderProfiles();
+}
+
+// ─── RENDER ────────────────────────────────────────────────
+function renderProfiles() {
+  const grid = document.getElementById('profilesGrid');
+  grid.innerHTML = '';
+  grid.classList.toggle('managing', managing);
+  document.getElementById('manageToggle').style.display = profiles.length ? 'inline-block' : 'none';
+
+  profiles.forEach(p => {
+    const tile = document.createElement('div');
+    tile.className = 'profile-tile';
+    tile.innerHTML = `
+      <button class="profile-delete" title="Elimina profilo">×</button>
+      <div class="profile-avatar" style="background:${p.color}">${esc(p.emoji)}</div>
+      <div class="profile-name">${esc(profileLabel(p))}</div>
+      <div class="profile-type">${p.type === 'couple' ? 'Coppia' : 'Singolo'}</div>
+    `;
+    tile.querySelector('.profile-delete').onclick = (e) => { e.stopPropagation(); deleteProfile(p.id); };
+    tile.onclick = () => { if (!managing) selectProfile(p.id); };
+    grid.appendChild(tile);
+  });
+
+  const add = document.createElement('div');
+  add.className = 'profile-tile add';
+  add.innerHTML = `
+    <div class="profile-avatar">+</div>
+    <div class="profile-name">Aggiungi profilo</div>
+    <div class="profile-type">&nbsp;</div>
+  `;
+  add.onclick = openAddProfile;
+  grid.appendChild(add);
+}
+
+function toggleManage() {
+  managing = !managing;
+  document.getElementById('manageToggle').textContent = managing ? 'Fatto' : 'Gestisci profili';
+  renderProfiles();
+}
+
+// ─── SELECT → CALENDARIO ───────────────────────────────────
+function selectProfile(id) {
+  window.location.href = 'index.html?profile=' + encodeURIComponent(id);
+}
+
+// ─── CREATE ────────────────────────────────────────────────
+function openAddProfile() {
+  newProfileType = 'single';
+  newProfileEmoji = AVATAR_EMOJIS[0];
+  document.getElementById('name1Input').value = '';
+  document.getElementById('name2Input').value = '';
+  document.getElementById('profileError').style.display = 'none';
+  setProfileType('single');
+  renderEmojiPicker();
+  document.getElementById('addProfileModal').classList.add('active');
+  setTimeout(() => document.getElementById('name1Input').focus(), 50);
+}
+function closeAddProfile() { document.getElementById('addProfileModal').classList.remove('active'); }
+
+function setProfileType(type) {
+  newProfileType = type;
+  document.querySelectorAll('#typeToggle button').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === type));
+  document.getElementById('name2Group').style.display = type === 'couple' ? 'block' : 'none';
+}
+
+function renderEmojiPicker() {
+  const picker = document.getElementById('emojiPicker');
+  picker.innerHTML = '';
+  AVATAR_EMOJIS.forEach(em => {
+    const el = document.createElement('div');
+    el.className = 'emoji-opt' + (em === newProfileEmoji ? ' selected' : '');
+    el.textContent = em;
+    el.onclick = () => { newProfileEmoji = em; renderEmojiPicker(); };
+    picker.appendChild(el);
+  });
+}
+
+async function createProfile() {
+  const err = document.getElementById('profileError');
+  const n1 = document.getElementById('name1Input').value.trim();
+  const n2 = document.getElementById('name2Input').value.trim();
+  if (!n1) { err.textContent = 'Inserisci almeno un nome.'; err.style.display = 'block'; return; }
+  if (newProfileType === 'couple' && !n2) { err.textContent = 'Inserisci entrambi i nomi per una coppia.'; err.style.display = 'block'; return; }
+  if (!db) { err.textContent = 'Firebase non configurato: impossibile salvare.'; err.style.display = 'block'; return; }
+
+  const names = newProfileType === 'couple' ? [n1, n2] : [n1];
+  const id = 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const profile = { type: newProfileType, names, emoji: newProfileEmoji, color: COLORS[profiles.length % COLORS.length], createdAt: Date.now() };
+
+  try {
+    await dbSet('profili/' + id, profile);
+    closeAddProfile();
+    selectProfile(id);   // entra subito nel calendario del nuovo profilo
+  } catch (e) {
+    err.textContent = 'Errore nel salvataggio: ' + (e.message || e);
+    err.style.display = 'block';
+  }
+}
+
+// ─── DELETE ────────────────────────────────────────────────
+async function deleteProfile(id) {
+  const p = profiles.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Eliminare il profilo "${profileLabel(p)}" e tutti i suoi piani salvati?`)) return;
+  try {
+    await dbDelete('profili/' + id);
+    await dbDelete('piani/' + id);   // rimuove anche i piani del profilo
+  } catch (e) { console.error(e); }
+  profiles = profiles.filter(x => x.id !== id);
+  renderProfiles();
+}
+
+// backdrop close
+document.getElementById('addProfileModal').addEventListener('click', e => {
+  if (e.target.id === 'addProfileModal') closeAddProfile();
+});
+
+// ─── INIT ──────────────────────────────────────────────────
+loadProfiles();
+</script>
+</body>
+</html>

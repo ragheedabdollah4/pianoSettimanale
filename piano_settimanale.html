@@ -271,6 +271,7 @@
   <div>
     <h1>🍽 Piano Alimentare</h1>
     <a href="index.html" class="back-link">← Torna al calendario</a>
+    <div id="profileHeaderName" style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);font-weight:500;margin-top:6px;"></div>
   </div>
   <div id="weekLabel" class="week-label"></div>
 </header>
@@ -575,8 +576,18 @@ function getWeekId(date) {
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
 
-// Settimana corrente (da ?week=YYYY-Www nell'URL, altrimenti questa settimana)
+// Profilo (da ?profile=... nell'URL) — senza profilo si torna alla selezione
 const urlParams = new URLSearchParams(window.location.search);
+const PROFILE_ID = urlParams.get('profile');
+if (!PROFILE_ID) { window.location.replace('profili.html'); }
+let PROFILE_TYPE = 'couple'; // aggiornato al caricamento del profilo
+// il link "torna al calendario" mantiene il profilo
+(function () {
+  const bk = document.querySelector('.back-link');
+  if (bk && PROFILE_ID) bk.href = 'index.html?profile=' + encodeURIComponent(PROFILE_ID);
+})();
+
+// Settimana corrente (da ?week=YYYY-Www nell'URL, altrimenti questa settimana)
 let currentWeekId = urlParams.get('week') || getWeekId(new Date());
 // Lunedì corrispondente al weekId (per la label leggibile)
 function mondayFromWeekId(weekId) {
@@ -619,7 +630,7 @@ function savePlan() {
       cena:   { name: d.cena.name,   source: d.cena.source,   done: normDone(d.cena.done) },
     })),
   };
-  db ? dbSet('piani/' + currentWeekId, payload)
+  db ? dbSet('piani/' + PROFILE_ID + '/' + currentWeekId, payload)
         .then(function () { showSaveStatus('✓ Salvato'); })
         .catch(function (err) { console.error(err); showSaveStatus('⚠ Errore salvataggio', true); })
      : showSaveStatus('⚠ Firebase non configurato', true);
@@ -630,7 +641,7 @@ async function loadSavedPlan() {
   try {
     // timeout di sicurezza: se la connessione resta appesa, non blocchiamo la pagina
     const data = await Promise.race([
-      dbGet('piani/' + currentWeekId),
+      dbGet('piani/' + PROFILE_ID + '/' + currentWeekId),
       new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout: nessuna risposta da Firebase')), 8000)),
     ]);
     if (!data) return null;
@@ -792,10 +803,12 @@ function escapeHtml(s) {
 
 function doneChipsHTML(dish, dayIdx, meal) {
   const d = dish.done || { p1: false, p2: false };
-  const chip = (who) =>
+  const chip = (who, full) =>
     `<button class="done-chip ${d[who] ? 'on' : ''}" id="done-${dayIdx}-${meal}-${who}"
+       style="${full ? 'max-width:100%' : ''}"
        onclick="event.stopPropagation(); toggleDone(${dayIdx},'${meal}','${who}')"
        title="Segna come consumato">${d[who] ? '✓ ' : ''}${escapeHtml(currentPeople[who])}</button>`;
+  if (PROFILE_TYPE === 'single') return `<div class="done-row">${chip('p1', true)}</div>`;
   return `<div class="done-row">${chip('p1')}${chip('p2')}</div>`;
 }
 
@@ -807,7 +820,7 @@ function mealCardInner(dish, dayIdx, meal) {
 
 function isConsumed(dish) {
   const d = dish.done || {};
-  return d.p1 && d.p2;
+  return PROFILE_TYPE === 'single' ? !!d.p1 : (d.p1 && d.p2);
 }
 
 function mealCardHTML(dish, dayIdx, meal) {
@@ -863,15 +876,22 @@ function toggleDone(dayIdx, meal, who) {
 }
 
 function syncPeopleInputs() {
-  document.getElementById('name1').value = currentPeople.p1 === 'Persona 1' ? '' : currentPeople.p1;
-  document.getElementById('name2').value = currentPeople.p2 === 'Persona 2' ? '' : currentPeople.p2;
+  document.getElementById('name1').value = (currentPeople.p1 && currentPeople.p1 !== 'Persona 1') ? currentPeople.p1 : '';
+  const n2 = document.getElementById('name2');
+  if (PROFILE_TYPE === 'single') {
+    n2.style.display = 'none';
+  } else {
+    n2.style.display = '';
+    n2.value = (currentPeople.p2 && currentPeople.p2 !== 'Persona 2') ? currentPeople.p2 : '';
+  }
   document.getElementById('peopleBar').style.display = currentPlan ? 'flex' : 'none';
 }
 
 let nameSaveTimer = null;
 function onNameChange() {
   currentPeople.p1 = document.getElementById('name1').value.trim() || 'Persona 1';
-  currentPeople.p2 = document.getElementById('name2').value.trim() || 'Persona 2';
+  if (PROFILE_TYPE !== 'single')
+    currentPeople.p2 = document.getElementById('name2').value.trim() || 'Persona 2';
   // aggiorna solo le etichette dei chip, senza ridisegnare tutto
   document.querySelectorAll('.done-chip').forEach(chip => {
     const who = chip.id.endsWith('-p1') ? 'p1' : 'p2';
@@ -882,7 +902,10 @@ function onNameChange() {
   clearTimeout(nameSaveTimer);
   nameSaveTimer = setTimeout(() => {
     savePlan();
-    if (db) dbSet('persone', currentPeople).catch(() => {});
+    if (db && PROFILE_ID) {
+      const names = PROFILE_TYPE === 'single' ? [currentPeople.p1] : [currentPeople.p1, currentPeople.p2];
+      dbSet('profili/' + PROFILE_ID + '/names', names).catch(() => {});
+    }
   }, 600);
 }
 
@@ -1219,11 +1242,20 @@ function showGridMessage(html) {
   document.getElementById('loadingOverlay').classList.add('active');
   document.getElementById('loadingText').textContent = 'Caricamento piano…';
 
-  // nomi predefiniti globali (per le nuove settimane)
-  if (db) {
+  // nomi e tipo dal profilo selezionato
+  if (db && PROFILE_ID) {
     try {
-      const v = await dbGet('persone');
-      if (v) currentPeople = { p1: v.p1 || currentPeople.p1, p2: v.p2 || currentPeople.p2 };
+      const prof = await dbGet('profili/' + PROFILE_ID);
+      if (prof) {
+        let names = prof.names;
+        if (names && !Array.isArray(names)) names = Object.values(names);
+        names = names || [];
+        PROFILE_TYPE = prof.type || (names.length > 1 ? 'couple' : 'single');
+        if (names[0]) currentPeople.p1 = names[0];
+        if (names[1]) currentPeople.p2 = names[1];
+        const hs = document.getElementById('profileHeaderName');
+        if (hs) hs.textContent = names.join(' & ');
+      }
     } catch (e) { /* best effort */ }
   }
 
