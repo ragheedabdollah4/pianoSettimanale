@@ -43,7 +43,9 @@
 
   .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; margin-bottom: 40px; }
   .day-col { background: var(--surface); border: 1px solid var(--border); min-width: 0; }
-  .day-header { background: var(--ink); color: var(--bg); padding: 10px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; }
+  .day-header { background: var(--ink); color: var(--bg); padding: 10px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; position: relative; }
+  .day-swap { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: var(--bg); cursor: pointer; border-radius: 3px; font-size: 0.85rem; line-height: 1; transition: all 0.15s; }
+  .day-swap:hover { background: var(--gold); border-color: var(--gold); color: var(--ink); }
 
   .meal-slot { padding: 12px; border-bottom: 1px solid var(--border); min-height: 120px; }
   .meal-slot:last-child { border-bottom: none; }
@@ -765,7 +767,7 @@ function renderPlan(plan) {
     const col = document.createElement('div');
     col.className = 'day-col';
     col.innerHTML = `
-      <div class="day-header">${dayPlan.day}</div>
+      <div class="day-header">${dayPlan.day}<button class="day-swap" onclick="swapDayMeals(${dayIdx})" title="Scambia pranzo e cena">⇅</button></div>
       <div class="meal-slot">
         <div class="meal-label">
           <span>☀ Pranzo</span>
@@ -791,6 +793,19 @@ function renderPlan(plan) {
   });
   syncPeopleInputs();
   renderDashboard();
+}
+
+// Scambia pranzo e cena dello stesso giorno (mantenendo lo stato "fatto")
+function swapDayMeals(dayIdx) {
+  if (!currentPlan || !currentPlan[dayIdx]) return;
+  const day = currentPlan[dayIdx];
+  const tmp = day.pranzo; day.pranzo = day.cena; day.cena = tmp;
+  renderPlan(currentPlan);
+  ['pranzo', 'cena'].forEach(m => {
+    const c = document.getElementById(`card-${dayIdx}-${m}`);
+    if (c) c.classList.add('just-changed');
+  });
+  savePlan();
 }
 
 function escapeHtml(s) {
