@@ -55,16 +55,38 @@
   .week-main { display: flex; flex-direction: column; gap: 3px; }
   .week-range { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; }
   .week-id { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-  .week-right { display: flex; align-items: center; gap: 14px; }
+  .week-right { display: flex; align-items: center; gap: 12px; }
   .badge { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; padding: 5px 12px; border-radius: 20px; }
   .badge.saved { background: #eaf3ec; color: var(--accent2); }
   .badge.empty { background: #f3efe8; color: var(--muted); }
   .badge.now { background: var(--gold); color: var(--ink); }
   .arrow { color: var(--muted); font-size: 1.1rem; }
 
+  /* indicatore di avanzamento (anello) */
+  .prog { position: relative; width: 36px; height: 36px; flex-shrink: 0; }
+  .prog svg { display: block; }
+  .prog-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 700; color: var(--ink); }
+  .prog-pct small { font-size: 0.5rem; font-weight: 500; }
+
+  /* pulsante elimina */
+  .week-del { width: 34px; height: 34px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 0.95rem; line-height: 1; border-radius: 4px; color: var(--muted); transition: all 0.15s; flex-shrink: 0; }
+  .week-del:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
   .saved-preview { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 
   .empty-state { text-align: center; padding: 40px; color: var(--muted); font-family: 'Playfair Display', serif; font-size: 1.05rem; border: 1px dashed var(--border); }
+
+  /* modale di conferma */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(26,18,8,0.6); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .modal-bg.active { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); padding: 32px 36px; width: 460px; max-width: 100%; }
+  .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 8px; }
+  .modal p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+  .modal-actions { display: flex; gap: 12px; margin-top: 22px; }
+  .btn-danger { background: var(--accent); color: #fff; }
+  .btn-danger:hover { background: #a8411d; }
+  .btn-secondary { background: var(--ink); color: var(--bg); }
+  .btn-secondary:hover { background: #333; }
 
   .fb-warning { background: #fff7ed; border: 1px solid var(--gold); color: #8a6d1f; padding: 14px 18px; font-size: 0.84rem; margin-bottom: 28px; line-height: 1.5; display: none; }
   .fb-warning code { background: rgba(0,0,0,0.06); padding: 1px 5px; }
@@ -120,6 +142,18 @@
   <p class="section-title">I piani salvati di questo profilo</p>
   <div class="week-list" id="savedList"></div>
 
+</div>
+
+<!-- Modale conferma eliminazione -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal">
+    <h2>🗑 Eliminare il piano?</h2>
+    <p id="confirmText"></p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="confirmDelBtn" onclick="confirmDelete()">Elimina</button>
+      <button class="btn btn-secondary" onclick="closeConfirm()">Annulla</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -206,27 +240,103 @@ function renderMonth() {
 }
 
 function weekRow(weekId, monday, saved, isNow) {
-  const a = document.createElement('a');
-  a.className = 'week-row' + (isNow ? ' current' : '');
-  a.href = weekUrl(weekId);
-
-  let badge;
-  if (isNow) badge = `<span class="badge now">Questa settimana</span>`;
-  else if (saved) badge = `<span class="badge saved">✓ Salvato</span>`;
-  else badge = `<span class="badge empty">Vuoto</span>`;
+  const row = document.createElement('div');
+  row.className = 'week-row' + (isNow ? ' current' : '');
+  row.onclick = () => openWeek(weekId);
 
   const preview = saved ? `<div class="saved-preview">${countSources(saved)}</div>` : '';
 
-  a.innerHTML = `
+  let right = '';
+  if (isNow) right += `<span class="badge now">Questa settimana</span>`;
+  if (saved) {
+    const p = planProgress(saved);
+    right += progressRing(p.pct, p.consumed, p.total);
+    right += `<button class="week-del" title="Elimina il piano di questa settimana"
+                onclick="event.stopPropagation(); askDelete('${weekId}')">🗑</button>`;
+  } else if (!isNow) {
+    right += `<span class="badge empty">Vuoto</span>`;
+  }
+  right += `<span class="arrow">→</span>`;
+
+  row.innerHTML = `
     <div class="week-main">
       <div class="week-range">${weekRangeLabel(monday)}</div>
       <div class="week-id">${weekId}</div>
       ${preview}
     </div>
-    <div class="week-right">${badge}<span class="arrow">→</span></div>
+    <div class="week-right">${right}</div>
   `;
-  return a;
+  return row;
 }
+
+// avanzamento (stessi dati del cruscotto: pasti consumati / totale)
+function planProgress(saved) {
+  let days = saved.days;
+  if (days && !Array.isArray(days)) days = Object.values(days);
+  const couple = !!(profile && profile.type === 'couple');
+  let total = 0, consumed = 0;
+  (days || []).forEach(d => ['pranzo', 'cena'].forEach(m => {
+    const dish = d && d[m];
+    if (!dish) return;
+    total++;
+    const dn = dish.done || {};
+    const done = couple ? (dn.p1 && dn.p2) : !!dn.p1;
+    if (done) consumed++;
+  }));
+  return { consumed, total, pct: total ? Math.round(consumed / total * 100) : 0 };
+}
+
+// anello di avanzamento (SVG)
+function progressRing(pct, consumed, total) {
+  const r = 13, circ = 2 * Math.PI * r, off = circ * (1 - pct / 100);
+  const color = pct === 100 ? 'var(--accent2)' : (pct > 0 ? 'var(--gold)' : 'var(--border)');
+  return `<div class="prog" title="${consumed}/${total} pasti consumati">
+    <svg width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="${r}" fill="none" stroke="var(--border)" stroke-width="4"></circle>
+      <circle cx="18" cy="18" r="${r}" fill="none" stroke="${color}" stroke-width="4"
+        stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
+        stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
+    </svg>
+    <span class="prog-pct">${pct}<small>%</small></span>
+  </div>`;
+}
+
+// ─── ELIMINAZIONE PIANO (con conferma) ─────────────────────
+let pendingDeleteWeek = null;
+function askDelete(weekId) {
+  pendingDeleteWeek = weekId;
+  const monday = mondayFromWeekId(weekId);
+  document.getElementById('confirmText').textContent =
+    'Stai per eliminare definitivamente il piano della settimana del ' +
+    weekRangeLabel(monday) + ' (' + weekId + '). Questa azione non può essere annullata.';
+  document.getElementById('confirmModal').classList.add('active');
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('active');
+  pendingDeleteWeek = null;
+}
+async function confirmDelete() {
+  const weekId = pendingDeleteWeek;
+  if (!weekId) return;
+  const btn = document.getElementById('confirmDelBtn');
+  btn.disabled = true; btn.textContent = 'Elimino…';
+  try {
+    if (db) await dbDelete('piani/' + PROFILE_ID + '/' + weekId);
+    delete savedPlans[weekId];
+    closeConfirm();
+    renderMonth();
+    renderSaved();
+  } catch (e) {
+    alert('Errore durante l\'eliminazione: ' + (e.message || e));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Elimina';
+  }
+}
+
+// chiudi la modale cliccando sullo sfondo
+document.getElementById('confirmModal').addEventListener('click', e => {
+  if (e.target.id === 'confirmModal') closeConfirm();
+});
 
 function countSources(saved) {
   let days = saved.days;
