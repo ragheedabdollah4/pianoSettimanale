@@ -226,7 +226,7 @@
 <header>
   <div>
     <h1>🍽 Piano Alimentare</h1>
-    <a href="index.html" class="back-link">← Torna al calendario</a>
+    <a href="calendario.html" class="back-link">← Torna al calendario</a>
   </div>
   <div id="weekLabel" class="week-label"></div>
 </header>
@@ -486,20 +486,28 @@ function savePlan() {
 }
 
 async function loadSavedPlan() {
-  if (!db) return null;
+  if (!db) return { error: 'Firebase non configurato' };
   try {
-    const snap = await db.ref('piani/' + currentWeekId).get();
+    // timeout di sicurezza: se la connessione resta appesa, non blocchiamo la pagina
+    const ref = db.ref('piani/' + currentWeekId);
+    const snap = await Promise.race([
+      ref.get(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout: nessuna risposta da Firebase')), 8000)),
+    ]);
     if (!snap.exists()) return null;
     const data = snap.val();
-    if (!data || !data.days) return null;
-    return data.days.map((d, i) => ({
-      day: d.day || DAYS[i],
-      pranzo: d.pranzo,
-      cena: d.cena,
+    let days = data && data.days;
+    // Realtime DB può restituire un array come oggetto {0:..,1:..}: normalizziamo
+    if (days && !Array.isArray(days)) days = Object.values(days);
+    if (!Array.isArray(days) || !days.length) return null;
+    return days.map((d, i) => ({
+      day: (d && d.day) || DAYS[i],
+      pranzo: (d && d.pranzo) || { name: '—', source: 'Insalate' },
+      cena:   (d && d.cena)   || { name: '—', source: 'Insalate' },
     }));
   } catch (err) {
     console.error('Errore caricamento:', err);
-    return null;
+    return { error: err.message || String(err) };
   }
 }
 
@@ -888,22 +896,51 @@ function sendEmail() {
 });
 
 document.getElementById('weekLabel').textContent = 'Settimana ' + currentWeekLabel;
+console.log('%c[Piano] versione v2 caricata · settimana ' + currentWeekId + ' · Firebase ' + (db ? 'connesso' : 'NON configurato'), 'color:#c8522a;font-weight:bold');
 
 // ─── INIT: carica il piano salvato di questa settimana, se esiste ─
+function showGridMessage(html) {
+  document.getElementById('planGrid').innerHTML =
+    `<div style="grid-column:1/-1; text-align:center; padding:50px; color:var(--muted); font-family:'Playfair Display',serif; font-size:1.05rem; line-height:1.5;">${html}</div>`;
+}
+
 (async () => {
   document.getElementById('loadingOverlay').classList.add('active');
   document.getElementById('loadingText').textContent = 'Caricamento piano…';
-  const saved = await loadSavedPlan();
-  document.getElementById('loadingOverlay').classList.remove('active');
-  if (saved) {
-    currentPlan = saved;
-    renderPlan(currentPlan);
-    document.getElementById('btnEmail').disabled = false;
-    document.getElementById('weekInfo').textContent = 'Settimana del ' + currentWeekLabel;
-    showSaveStatus('📂 Piano caricato');
-  } else {
-    document.getElementById('weekInfo').textContent = 'Settimana del ' + currentWeekLabel + ' — nessun piano salvato';
+
+  let saved = null;
+  try {
+    saved = await loadSavedPlan();
+  } catch (e) {
+    saved = { error: e.message || String(e) };
   }
+  document.getElementById('loadingOverlay').classList.remove('active');
+
+  document.getElementById('weekInfo').textContent = 'Settimana del ' + currentWeekLabel + ' · ' + currentWeekId;
+
+  // Caso errore: mostra il motivo invece di lasciare la pagina vuota
+  if (saved && saved.error) {
+    showGridMessage(`⚠ Impossibile caricare il piano.<br><span style="font-size:0.85rem">${saved.error}</span><br><br>Puoi comunque premere "🎲 Genera Piano".`);
+    showSaveStatus('⚠ ' + saved.error, true);
+    return;
+  }
+
+  // Caso piano trovato: prova a disegnarlo, ma non lasciare mai la pagina bianca
+  if (saved) {
+    try {
+      currentPlan = saved;
+      renderPlan(currentPlan);
+      document.getElementById('btnEmail').disabled = false;
+      showSaveStatus('📂 Piano caricato');
+    } catch (e) {
+      console.error('Errore rendering:', e);
+      showGridMessage(`⚠ Errore nel mostrare il piano: ${e.message}.<br>Premi "🎲 Genera Piano" per ricrearlo.`);
+    }
+    return;
+  }
+
+  // Nessun piano salvato per questa settimana
+  showGridMessage(`Nessun piano salvato per la settimana <strong>${currentWeekId}</strong>.<br>Premi "🎲 Genera Piano" per crearne uno.`);
 })();
 </script>
 </body>

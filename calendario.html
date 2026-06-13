@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario · Piano Alimentare</title>
+
+<!-- ════════════════════════════════════════════════════════════
+     FIREBASE — Realtime Database
+     ⬇⬇⬇  SOSTITUISCI QUI con la TUA config (DEVE essere identica
+     a quella in piano_settimanale.html)
+════════════════════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBrPK0iixlBVnKNstrzbhsAREzhW2OfoAQ",
+    authDomain: "pianosettimanaledb.firebaseapp.com",
+    databaseURL: "https://pianosettimanaledb-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "pianosettimanaledb",
+    storageBucket: "pianosettimanaledb.firebasestorage.app",
+    messagingSenderId: "479375847867",
+    appId: "1:479375847867:web:4178c4657379b17343d49e"
+  };
+
+  let db = null;
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch (e) {
+    console.error("Firebase non inizializzato:", e);
+  }
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #faf7f2; --surface: #ffffff; --ink: #1a1208; --muted: #7a6e5f;
+    --accent: #c8522a; --accent2: #4a7c59; --gold: #d4a843; --border: #e8e0d4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  header { background: var(--ink); color: var(--bg); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
+  header span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); font-weight: 500; }
+
+  .container { max-width: 920px; margin: 0 auto; padding: 40px 32px; }
+
+  .btn { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 12px 24px; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #a8411d; }
+  .btn-ghost { background: transparent; color: var(--bg); border: 1px solid rgba(255,255,255,0.4); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.12); }
+
+  .month-nav { display: flex; align-items: center; gap: 18px; margin-bottom: 28px; }
+  .month-nav button { width: 42px; height: 42px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 1.1rem; color: var(--ink); transition: all 0.15s; }
+  .month-nav button:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .month-label { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; flex: 1; text-transform: capitalize; }
+
+  .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); font-weight: 600; margin: 0 0 14px; }
+
+  .week-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 44px; }
+  .week-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px; background: var(--surface); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit;
+  }
+  .week-row:hover { border-color: var(--ink); transform: translateX(3px); }
+  .week-row.current { border-left: 4px solid var(--gold); }
+  .week-main { display: flex; flex-direction: column; gap: 3px; }
+  .week-range { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; }
+  .week-id { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .week-right { display: flex; align-items: center; gap: 14px; }
+  .badge { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; padding: 5px 12px; border-radius: 20px; }
+  .badge.saved { background: #eaf3ec; color: var(--accent2); }
+  .badge.empty { background: #f3efe8; color: var(--muted); }
+  .badge.now { background: var(--gold); color: var(--ink); }
+  .arrow { color: var(--muted); font-size: 1.1rem; }
+
+  .saved-preview { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); font-family: 'Playfair Display', serif; font-size: 1.05rem; border: 1px dashed var(--border); }
+
+  .fb-warning { background: #fff7ed; border: 1px solid var(--gold); color: #8a6d1f; padding: 14px 18px; font-size: 0.84rem; margin-bottom: 28px; line-height: 1.5; display: none; }
+  .fb-warning code { background: rgba(0,0,0,0.06); padding: 1px 5px; }
+
+  @media (max-width: 700px) {
+    header { padding: 22px 22px; }
+    header h1 { font-size: 1.5rem; }
+    .container { padding: 26px 16px; }
+    .week-row { padding: 14px 16px; }
+    .week-range { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📅 Calendario Pasti</h1>
+    <span>Scegli una settimana</span>
+  </div>
+  <button class="btn btn-primary" onclick="goToCurrentWeek()">→ Settimana corrente</button>
+</header>
+
+<div class="container">
+
+  <div class="fb-warning" id="fbWarning">
+    ⚠ Firebase non è configurato: i piani non possono essere salvati né caricati.
+    Apri questo file e <code>piano_settimanale.html</code> e incolla la tua <code>firebaseConfig</code> nel blocco in cima.
+  </div>
+
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)" aria-label="Mese precedente">‹</button>
+    <div class="month-label" id="monthLabel"></div>
+    <button onclick="changeMonth(1)" aria-label="Mese successivo">›</button>
+  </div>
+
+  <p class="section-title">Settimane di questo mese</p>
+  <div class="week-list" id="weekList"></div>
+
+  <p class="section-title">I tuoi piani salvati</p>
+  <div class="week-list" id="savedList"></div>
+
+</div>
+
+<script>
+const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+let viewDate = new Date();          // mese visualizzato
+let savedPlans = {};                // mappa weekId -> dati piano (da Firebase)
+
+// ─── DATE / WEEK HELPERS ───────────────────────────────────
+function getMondayOf(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.getFullYear(), d.getMonth(), diff);
+}
+function getWeekId(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+function weekRangeLabel(monday) {
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
+  return `${fmt(monday)} – ${fmt(sunday)}`;
+}
+function mondayFromWeekId(weekId) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(weekId);
+  if (!m) return getMondayOf(new Date());
+  const year = +m[1], week = +m[2];
+  const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+  const dow = simple.getUTCDay() || 7;
+  const monday = new Date(simple);
+  monday.setUTCDate(simple.getUTCDate() - dow + 1);
+  return new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate());
+}
+
+// ─── NAVIGATION ────────────────────────────────────────────
+function openWeek(weekId) {
+  window.location.href = `piano_settimanale.html?week=${weekId}`;
+}
+function goToCurrentWeek() {
+  openWeek(getWeekId(new Date()));
+}
+function changeMonth(delta) {
+  viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1);
+  renderMonth();
+}
+
+// ─── RENDER MONTH ──────────────────────────────────────────
+function renderMonth() {
+  document.getElementById('monthLabel').textContent =
+    viewDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+
+  const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const lastOfMonth  = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
+  const todayWeekId  = getWeekId(new Date());
+
+  // tutti i lunedì le cui settimane toccano il mese
+  const weeks = [];
+  let cursor = getMondayOf(firstOfMonth);
+  while (cursor <= lastOfMonth) {
+    weeks.push(new Date(cursor));
+    cursor = new Date(cursor); cursor.setDate(cursor.getDate() + 7);
+  }
+
+  const list = document.getElementById('weekList');
+  list.innerHTML = '';
+  weeks.forEach(monday => {
+    const weekId = getWeekId(monday);
+    const saved = savedPlans[weekId];
+    const isNow = weekId === todayWeekId;
+    list.appendChild(weekRow(weekId, monday, saved, isNow));
+  });
+}
+
+function weekRow(weekId, monday, saved, isNow) {
+  const a = document.createElement('a');
+  a.className = 'week-row' + (isNow ? ' current' : '');
+  a.href = `piano_settimanale.html?week=${weekId}`;
+
+  let badge;
+  if (isNow) badge = `<span class="badge now">Questa settimana</span>`;
+  else if (saved) badge = `<span class="badge saved">✓ Salvato</span>`;
+  else badge = `<span class="badge empty">Vuoto</span>`;
+
+  const preview = saved
+    ? `<div class="saved-preview">${countSources(saved)}</div>` : '';
+
+  a.innerHTML = `
+    <div class="week-main">
+      <div class="week-range">${weekRangeLabel(monday)}</div>
+      <div class="week-id">${weekId}</div>
+      ${preview}
+    </div>
+    <div class="week-right">${badge}<span class="arrow">→</span></div>
+  `;
+  return a;
+}
+
+function countSources(saved) {
+  if (!saved.days) return 'Piano salvato';
+  const counts = {};
+  saved.days.forEach(d => [d.pranzo, d.cena].forEach(x => {
+    if (x && x.source) counts[x.source] = (counts[x.source] || 0) + 1;
+  }));
+  return Object.entries(counts).map(([s, n]) => `${s} ${n}×`).join(' · ');
+}
+
+// ─── RENDER SAVED LIST ─────────────────────────────────────
+function renderSaved() {
+  const el = document.getElementById('savedList');
+  const ids = Object.keys(savedPlans).sort().reverse(); // più recenti in alto
+  if (!ids.length) {
+    el.innerHTML = `<div class="empty-state">Nessun piano salvato finora.<br>Apri una settimana qui sopra e genera il tuo primo piano.</div>`;
+    return;
+  }
+  el.innerHTML = '';
+  ids.forEach(weekId => {
+    const saved = savedPlans[weekId];
+    const monday = mondayFromWeekId(weekId);
+    el.appendChild(weekRow(weekId, monday, saved, false));
+  });
+}
+
+// ─── INIT: leggi i piani salvati da Firebase ───────────────
+(async () => {
+  if (!db) {
+    document.getElementById('fbWarning').style.display = 'block';
+    renderMonth(); renderSaved();
+    return;
+  }
+  try {
+    const snap = await db.ref('piani').get();
+    savedPlans = snap.exists() ? (snap.val() || {}) : {};
+  } catch (e) {
+    console.error('Errore lettura piani:', e);
+    document.getElementById('fbWarning').style.display = 'block';
+  }
+  renderMonth();
+  renderSaved();
+})();
+</script>
+</body>
+</html>
