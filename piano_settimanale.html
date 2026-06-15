@@ -42,8 +42,15 @@
   .freq-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; color: white; }
   .freq-badge .count { font-weight: 700; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 40px; }
-  .day-col { background: var(--surface); border: 1px solid var(--border); min-width: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); column-gap: 14px; row-gap: 14px; margin-bottom: 40px; }
+  /* Ogni colonna-giorno condivide le stesse righe (subgrid): così tutti i box
+     "Pranzo" hanno la stessa altezza tra loro, idem Cena e Spuntini. */
+  .day-col { display: grid; grid-template-rows: subgrid; grid-row: span 5; row-gap: 0; background: var(--surface); border: 1px solid var(--border); min-width: 0; }
+  .day-col > :nth-child(1) { grid-row: 1; }  /* intestazione giorno */
+  .day-col > :nth-child(2) { grid-row: 2; }  /* riga sgarri */
+  .day-col > :nth-child(3) { grid-row: 3; }  /* pranzo */
+  .day-col > :nth-child(4) { grid-row: 4; }  /* cena */
+  .day-col > :nth-child(5) { grid-row: 5; }  /* spuntini */
   .day-header { background: var(--ink); color: var(--bg); padding: 10px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; position: relative; }
   .day-swap { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: var(--bg); cursor: pointer; border-radius: 3px; font-size: 0.85rem; line-height: 1; transition: all 0.15s; }
   .day-swap:hover { background: var(--gold); border-color: var(--gold); color: var(--ink); }
@@ -61,7 +68,7 @@
   .sgarro-opt { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px solid var(--border); background: var(--bg); cursor: pointer; border-radius: 8px; transition: all 0.15s; }
   .sgarro-opt:hover { border-color: var(--gold); background: #fffaf0; transform: translateY(-1px); }
 
-  .meal-slot { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; }
+  .meal-slot { padding: 14px; border-bottom: 1px solid var(--border); min-height: 140px; display: flex; flex-direction: column; }
   .meal-slot:last-child { border-bottom: none; }
   .meal-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; justify-content: space-between; }
 
@@ -76,7 +83,7 @@
   .swap-btn.ai { border-color: var(--gold); color: #a07a20; }
   .swap-btn.ai:hover { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 
-  .meal-card { padding: 8px 10px; border-left: 3px solid; background: rgba(0,0,0,0.02); transition: background 0.2s; }
+  .meal-card { flex: 1 1 auto; padding: 8px 10px; border-left: 3px solid; background: rgba(0,0,0,0.02); transition: background 0.2s; }
   .meal-card.just-changed { animation: highlight 0.7s ease; }
   @keyframes highlight { 0% { background: rgba(212,168,67,0.3); } 100% { background: rgba(0,0,0,0.02); } }
   .meal-name { font-size: 0.88rem; font-weight: 500; line-height: 1.35; margin-bottom: 4px; overflow-wrap: anywhere; word-break: break-word; }
