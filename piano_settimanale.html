@@ -129,6 +129,15 @@
   .done-chip.on { background: var(--accent2); border-color: var(--accent2); color: white; font-weight: 600; }
   .meal-card.consumed { opacity: 0.62; }
 
+  /* Spuntini (snack generici del giorno) */
+  .snack-slot { padding: 12px 14px; border-top: 1px dashed var(--border); background: rgba(212,168,67,0.05); }
+  .snack-slot .meal-label { margin-bottom: 6px; }
+  .snack-row { padding: 7px 0; }
+  .snack-row + .snack-row { border-top: 1px solid var(--border); }
+  .snack-name { font-size: 0.8rem; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+  .snack-row.consumed { opacity: 0.6; }
+  .dash-snacks { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
+
   /* Shopping list */
   .btn-shop { background: var(--gold); color: var(--ink); }
   .btn-shop:hover { background: #c0962f; }
@@ -661,6 +670,19 @@ function normDone(d) {
   return { p1: !!x.p1, p2: !!x.p2 };
 }
 
+// Due spuntini generici per giorno, ognuno con stato "fatto" per persona
+function freshSpuntini() {
+  return [{ done: { p1: false, p2: false } }, { done: { p1: false, p2: false } }];
+}
+function normSpuntini(arr) {
+  let a = arr;
+  if (a && !Array.isArray(a)) a = Object.values(a);
+  a = Array.isArray(a) ? a : [];
+  const out = [];
+  for (let i = 0; i < 2; i++) out.push({ done: normDone(a[i] && a[i].done) });
+  return out;
+}
+
 function savePlan() {
   if (!currentPlan) return;
   if (!db) { showSaveStatus('⚠ Firebase non configurato', true); return; }
@@ -674,6 +696,7 @@ function savePlan() {
       pranzo: { name: d.pranzo.name, source: d.pranzo.source, done: normDone(d.pranzo.done) },
       cena:   { name: d.cena.name,   source: d.cena.source,   done: normDone(d.cena.done) },
       sgarri: Array.isArray(d.sgarri) ? d.sgarri : [],
+      spuntini: normSpuntini(d.spuntini),
     })),
   };
   db ? dbSet('piani/' + PROFILE_ID + '/' + currentWeekId, payload)
@@ -707,6 +730,7 @@ async function loadSavedPlan() {
           pranzo: mapMeal(d && d.pranzo),
           cena:   mapMeal(d && d.cena),
           sgarri: Array.isArray(sg) ? sg : [],
+          spuntini: normSpuntini(d && d.spuntini),
         };
       }),
       people: data.people ? data.people : null,
@@ -808,7 +832,7 @@ function buildPlan() {
     used.add(pick.name);
     return { name: pick.name, source: pick.source, done: { p1: false, p2: false } };
   }
-  return slots.map((day, i) => ({ day: DAYS[i], pranzo: pickDish(day[0]), cena: pickDish(day[1]), sgarri: [] }));
+  return slots.map((day, i) => ({ day: DAYS[i], pranzo: pickDish(day[0]), cena: pickDish(day[1]), sgarri: [], spuntini: freshSpuntini() }));
 }
 
 // ─── RENDER ────────────────────────────────────────────────
@@ -842,6 +866,7 @@ function renderPlan(plan) {
         </div>
         ${mealCardHTML(dayPlan.cena, dayIdx, 'cena')}
       </div>
+      ${snackSlotHTML(dayPlan, dayIdx)}
     `;
     grid.appendChild(col);
   });
@@ -1041,6 +1066,7 @@ function applyCopy(i) {
     pranzo: mapMeal(d && d.pranzo),
     cena: mapMeal(d && d.cena),
     sgarri: [],
+    spuntini: freshSpuntini(),
   }));
   renderPlan(currentPlan);
   document.getElementById('btnEmail').disabled = false;
@@ -1087,6 +1113,59 @@ function mealCardHTML(dish, dayIdx, meal) {
   </div>`;
 }
 
+// ─── SPUNTINI (snack generici, solo da spuntare come "fatto") ──
+function snackConsumed(snack) {
+  const d = (snack && snack.done) || {};
+  return PROFILE_TYPE === 'single' ? !!d.p1 : (d.p1 && d.p2);
+}
+
+function snackChipsHTML(snack, dayIdx, sidx) {
+  const d = (snack && snack.done) || { p1: false, p2: false };
+  const chip = (who, full) =>
+    `<button class="done-chip ${d[who] ? 'on' : ''}" id="snackdone-${dayIdx}-${sidx}-${who}"
+       style="${full ? 'max-width:100%' : ''}"
+       onclick="event.stopPropagation(); toggleSnackDone(${dayIdx},${sidx},'${who}')"
+       title="Segna come fatto">${d[who] ? '✓ ' : ''}${escapeHtml(currentPeople[who])}</button>`;
+  if (PROFILE_TYPE === 'single') return `<div class="done-row">${chip('p1', true)}</div>`;
+  return `<div class="done-row">${chip('p1')}${chip('p2')}</div>`;
+}
+
+function snackSlotHTML(dayPlan, dayIdx) {
+  const sp = Array.isArray(dayPlan.spuntini) ? dayPlan.spuntini : normSpuntini(dayPlan.spuntini);
+  const row = (sidx, label) => {
+    const snack = sp[sidx] || { done: { p1: false, p2: false } };
+    const consumed = snackConsumed(snack) ? ' consumed' : '';
+    return `<div class="snack-row${consumed}" id="snack-${dayIdx}-${sidx}">
+        <div class="snack-name">${label}</div>
+        ${snackChipsHTML(snack, dayIdx, sidx)}
+      </div>`;
+  };
+  return `<div class="snack-slot">
+      <div class="meal-label"><span>🥨 Spuntini</span></div>
+      ${row(0, 'Spuntino 1')}
+      ${row(1, 'Spuntino 2')}
+    </div>`;
+}
+
+function toggleSnackDone(dayIdx, sidx, who) {
+  const day = currentPlan[dayIdx];
+  if (!day) return;
+  if (!Array.isArray(day.spuntini)) day.spuntini = normSpuntini(day.spuntini);
+  if (!day.spuntini[sidx]) day.spuntini[sidx] = { done: { p1: false, p2: false } };
+  const snack = day.spuntini[sidx];
+  if (!snack.done) snack.done = { p1: false, p2: false };
+  snack.done[who] = !snack.done[who];
+  const chip = document.getElementById(`snackdone-${dayIdx}-${sidx}-${who}`);
+  if (chip) {
+    chip.classList.toggle('on', snack.done[who]);
+    chip.textContent = (snack.done[who] ? '✓ ' : '') + currentPeople[who];
+  }
+  const rowEl = document.getElementById(`snack-${dayIdx}-${sidx}`);
+  if (rowEl) rowEl.classList.toggle('consumed', snackConsumed(snack));
+  renderDashboard();
+  savePlan();
+}
+
 function refreshFreqBar(plan) {
   const counts = {};
   plan.forEach(d => [d.pranzo.source, d.cena.source].forEach(s => { counts[s] = (counts[s]||0)+1; }));
@@ -1121,11 +1200,15 @@ function applyDishToCard(dayIdx, meal, dish) {
 function srcLabel(src) { return (FREQUENCIES[src] && FREQUENCIES[src].label) || src; }
 
 function computeStats() {
-  const stats = { total: 0, consumed: 0, p1: 0, p2: 0, sgarri: 0, perDay: [], perSource: {} };
+  const stats = { total: 0, consumed: 0, p1: 0, p2: 0, sgarri: 0, snackDone: 0, snackTotal: 0, perDay: [], perSource: {} };
   if (!currentPlan) return stats;
   currentPlan.forEach(day => {
     let dC = 0, dT = 0;
     stats.sgarri += Array.isArray(day.sgarri) ? day.sgarri.length : 0;
+    (Array.isArray(day.spuntini) ? day.spuntini : []).forEach(sp => {
+      stats.snackTotal++;
+      if (snackConsumed(sp)) stats.snackDone++;
+    });
     ['pranzo', 'cena'].forEach(m => {
       const dish = day[m];
       if (!dish) return;
@@ -1199,6 +1282,9 @@ function renderDashboard() {
   const penaltyHTML = penalty > 0
     ? `<div class="dash-penalty">🍿 ${s.sgarri} sgarr${s.sgarri === 1 ? 'o' : 'i'} · −${penalty}% sul progresso</div>`
     : '';
+  const snackHTML = s.snackTotal
+    ? `<div class="dash-snacks">🥨 Spuntini fatti: ${s.snackDone}/${s.snackTotal}</div>`
+    : '';
 
   dash.innerHTML = `
     <div class="dash-head">📊 Andamento della settimana</div>
@@ -1208,6 +1294,7 @@ function renderDashboard() {
         <div class="dash-label">${headline}</div>
         <div class="dash-bar"><span style="width:${pct}%"></span></div>
         ${penaltyHTML}
+        ${snackHTML}
         ${peopleHTML}
       </div>
       <div class="dash-card">
@@ -1575,7 +1662,7 @@ function sendEmail() {
 });
 
 document.getElementById('weekLabel').textContent = 'Settimana ' + currentWeekLabel;
-console.log('%c[Piano] versione v6 caricata · settimana ' + currentWeekId + ' · Firebase ' + (db ? 'connesso' : 'NON configurato'), 'color:#c8522a;font-weight:bold');
+console.log('%c[Piano] versione v7 caricata · settimana ' + currentWeekId + ' · Firebase ' + (db ? 'connesso' : 'NON configurato'), 'color:#c8522a;font-weight:bold');
 
 // ─── INIT: carica il piano salvato di questa settimana, se esiste ─
 function showGridMessage(html) {
