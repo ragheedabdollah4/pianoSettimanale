@@ -129,9 +129,8 @@
   .done-chip.on { background: var(--accent2); border-color: var(--accent2); color: white; font-weight: 600; }
   .meal-card.consumed { opacity: 0.62; }
 
-  /* Spuntini (snack generici del giorno) */
-  .snack-slot { padding: 12px 14px; border-top: 1px dashed var(--border); background: rgba(212,168,67,0.05); }
-  .snack-slot .meal-label { margin-bottom: 6px; }
+  /* Spuntini (snack generici del giorno) — stessa geometria di pranzo/cena */
+  .snack-slot { padding: 14px; min-height: 140px; background: rgba(212,168,67,0.05); }
   .snack-row { padding: 7px 0; }
   .snack-row + .snack-row { border-top: 1px solid var(--border); }
   .snack-name { font-size: 0.8rem; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
