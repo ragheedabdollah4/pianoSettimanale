@@ -80,8 +80,6 @@
     transition: all 0.15s; line-height: 1.5; white-space: nowrap; text-align: center;
   }
   .swap-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
-  .swap-btn.ai { border-color: var(--gold); color: #a07a20; }
-  .swap-btn.ai:hover { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 
   .meal-card { flex: 1 1 auto; padding: 8px 10px; border-left: 3px solid; background: rgba(0,0,0,0.02); transition: background 0.2s; }
   .meal-card.just-changed { animation: highlight 0.7s ease; }
@@ -205,48 +203,6 @@
   .alt-item.selected .check-icon { opacity: 1; }
   .no-alts { color: var(--muted); font-size: 0.85rem; font-style: italic; padding: 12px 0; }
 
-  /* AI Suggest modal */
-  .ai-suggest-box {
-    border: 1px solid var(--gold);
-    padding: 20px;
-    margin-bottom: 18px;
-    background: #fffdf5;
-    position: relative;
-    min-height: 100px;
-  }
-  .ai-suggest-box .ai-label {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 600;
-    color: var(--gold);
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .ai-suggest-dish {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 6px;
-    color: var(--ink);
-  }
-  .ai-suggest-source {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 600;
-    margin-bottom: 12px;
-  }
-  .ai-suggest-reason {
-    font-size: 0.82rem;
-    color: var(--muted);
-    line-height: 1.6;
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
-    margin-top: 4px;
-  }
   .ai-loading {
     display: flex;
     align-items: center;
@@ -256,8 +212,6 @@
     padding: 16px 0;
   }
   .ai-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-  .ai-retry-btn { font-size: 0.72rem; padding: 4px 10px; background: transparent; border: 1px solid var(--gold); color: #a07a20; cursor: pointer; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 10px; transition: all 0.15s; }
-  .ai-retry-btn:hover { background: var(--gold); color: var(--ink); }
 
   .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px; }
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; }
@@ -385,26 +339,6 @@
     <div class="modal-actions">
       <button class="btn btn-primary" id="confirmSwapBtn" onclick="confirmSwap()" disabled>Conferma</button>
       <button class="btn btn-secondary" onclick="closeSwapModal()">Annulla</button>
-    </div>
-  </div>
-</div>
-
-<!-- AI Suggest modal -->
-<div class="modal-bg" id="aiModal">
-  <div class="modal">
-    <h2>✨ Suggerimento AI</h2>
-    <p class="modal-subtitle">Un'alternativa con la stessa fonte proteica, scelta tra i piatti non ancora in settimana.</p>
-    <div class="swap-context" id="aiContext"></div>
-    <div class="ai-suggest-box" id="aiSuggestBox">
-      <div class="ai-loading" id="aiLoading">
-        <div class="ai-spinner"></div>
-        <span>Sto scegliendo un'alternativa…</span>
-      </div>
-      <div id="aiResult" style="display:none"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" id="confirmAiBtn" onclick="confirmAiSwap()" disabled>Usa questo piatto</button>
-      <button class="btn btn-secondary" onclick="closeAiModal()">Annulla</button>
     </div>
   </div>
 </div>
@@ -594,7 +528,6 @@ const SOURCE_CLASS = {
 let currentPlan = null;
 let swapTarget = null;
 let swapSelected = null;
-let aiSuggestedDish = null;
 let currentPeople = { p1: 'Persona 1', p2: 'Persona 2' };
 
 // ─── HELPERS ───────────────────────────────────────────────
@@ -857,7 +790,6 @@ function renderPlan(plan) {
           <span>☀ Pranzo</span>
           <div class="meal-actions">
             <button class="swap-btn" onclick="openSwapModal(${dayIdx},'pranzo')" title="Scegli manualmente">✏ Cambia</button>
-            <button class="swap-btn ai" onclick="openAiModal(${dayIdx},'pranzo')" title="Chiedi a Claude">✨ Suggerisci</button>
           </div>
         </div>
         ${mealCardHTML(dayPlan.pranzo, dayIdx, 'pranzo')}
@@ -867,7 +799,6 @@ function renderPlan(plan) {
           <span>🌙 Cena</span>
           <div class="meal-actions">
             <button class="swap-btn" onclick="openSwapModal(${dayIdx},'cena')" title="Scegli manualmente">✏ Cambia</button>
-            <button class="swap-btn ai" onclick="openAiModal(${dayIdx},'cena')" title="Chiedi a Claude">✨ Suggerisci</button>
           </div>
         </div>
         ${mealCardHTML(dayPlan.cena, dayIdx, 'cena')}
@@ -1433,79 +1364,6 @@ function closeSwapModal() {
   swapTarget = swapSelected = null;
 }
 
-// ─── AI SUGGEST ────────────────────────────────────────────
-function openAiModal(dayIdx, meal) {
-  if (!currentPlan) return;
-  swapTarget = { dayIdx, meal };
-  aiSuggestedDish = null;
-
-  document.getElementById('aiContext').innerHTML = swapContextHTML(dayIdx, meal);
-  document.getElementById('aiLoading').style.display = 'none';
-  document.getElementById('aiResult').style.display = 'none';
-  document.getElementById('confirmAiBtn').disabled = true;
-  document.getElementById('aiModal').classList.add('active');
-
-  suggestLocally(dayIdx, meal);
-}
-
-// Suggerimento calcolato in locale: stessa fonte, preferendo piatti non ancora usati in settimana
-function suggestLocally(dayIdx, meal) {
-  const current = currentPlan[dayIdx][meal];
-
-  // piatti già presenti questa settimana
-  const usedNames = new Set();
-  currentPlan.forEach(d => { usedNames.add(d.pranzo.name); usedNames.add(d.cena.name); });
-
-  const sameSource = DISHES.filter(d => d.source === current.source && d.name !== current.name);
-  const fresh = sameSource.filter(d => !usedNames.has(d.name)); // non ancora in settimana
-  const pool = fresh.length ? fresh : sameSource;
-
-  const res = document.getElementById('aiResult');
-  res.style.display = 'block';
-
-  if (!pool.length) {
-    res.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;font-style:italic">Nessuna alternativa disponibile per la fonte "${escapeHtml(current.source)}". Usa "✏ Cambia" per scegliere un'altra fonte.</p>`;
-    document.getElementById('confirmAiBtn').disabled = true;
-    return;
-  }
-
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  aiSuggestedDish = { name: pick.name, source: pick.source, done: { p1: false, p2: false } };
-
-  const reason = fresh.length
-    ? `Piatto di ${current.source.toLowerCase()} non ancora presente in settimana: aggiunge varietà mantenendo la stessa fonte proteica.`
-    : `Alternativa di ${current.source.toLowerCase()} per cambiare piatto mantenendo la fonte proteica.`;
-
-  const srcCls = SOURCE_CLASS[current.source] || 'src-insalate';
-  res.innerHTML = `
-    <div class="ai-label">✨ Suggerimento</div>
-    <div class="ai-suggest-dish">${escapeHtml(pick.name)}</div>
-    <div class="ai-suggest-source ${srcCls}">${escapeHtml(current.source)}</div>
-    <div class="ai-suggest-reason">${reason}</div>
-    <button class="ai-retry-btn" onclick="retryAiSuggest()">🔄 Altro suggerimento</button>
-  `;
-  document.getElementById('confirmAiBtn').disabled = false;
-}
-
-function retryAiSuggest() {
-  if (!swapTarget) return;
-  aiSuggestedDish = null;
-  document.getElementById('confirmAiBtn').disabled = true;
-  suggestLocally(swapTarget.dayIdx, swapTarget.meal);
-}
-
-function confirmAiSwap() {
-  if (!aiSuggestedDish || !swapTarget) return;
-  applyDishToCard(swapTarget.dayIdx, swapTarget.meal, aiSuggestedDish);
-  closeAiModal();
-}
-
-function closeAiModal() {
-  document.getElementById('aiModal').classList.remove('active');
-  swapTarget = null;
-  aiSuggestedDish = null;
-}
-
 // ─── LISTA DELLA SPESA ─────────────────────────────────────
 let shopListText = '';
 
@@ -1653,12 +1511,11 @@ function sendEmail() {
 }
 
 // close modals on backdrop click
-['emailModal','swapModal','aiModal','shopModal','sgarriModal','addDishModal','copyModal'].forEach(id => {
+['emailModal','swapModal','shopModal','sgarriModal','addDishModal','copyModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target === document.getElementById(id)) {
       if (id === 'emailModal') closeEmailModal();
       if (id === 'swapModal') closeSwapModal();
-      if (id === 'aiModal') closeAiModal();
       if (id === 'shopModal') closeShopModal();
       if (id === 'sgarriModal') closeSgarriModal();
       if (id === 'addDishModal') closeAddDishModal();
